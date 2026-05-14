@@ -9,38 +9,174 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as PlansRouteImport } from './routes/plans'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as LicensesRouteImport } from './routes/licenses'
+import { Route as DevicesRouteImport } from './routes/devices'
+import { Route as AuditRouteImport } from './routes/audit'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LicensesIdRouteImport } from './routes/licenses.$id'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlansRoute = PlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LicensesRoute = LicensesRouteImport.update({
+  id: '/licenses',
+  path: '/licenses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevicesRoute = DevicesRouteImport.update({
+  id: '/devices',
+  path: '/devices',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditRoute = AuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LicensesIdRoute = LicensesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => LicensesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/audit': typeof AuditRoute
+  '/devices': typeof DevicesRoute
+  '/licenses': typeof LicensesRouteWithChildren
+  '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
+  '/settings': typeof SettingsRoute
+  '/licenses/$id': typeof LicensesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/audit': typeof AuditRoute
+  '/devices': typeof DevicesRoute
+  '/licenses': typeof LicensesRouteWithChildren
+  '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
+  '/settings': typeof SettingsRoute
+  '/licenses/$id': typeof LicensesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/audit': typeof AuditRoute
+  '/devices': typeof DevicesRoute
+  '/licenses': typeof LicensesRouteWithChildren
+  '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
+  '/settings': typeof SettingsRoute
+  '/licenses/$id': typeof LicensesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/audit'
+    | '/devices'
+    | '/licenses'
+    | '/login'
+    | '/plans'
+    | '/settings'
+    | '/licenses/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/audit'
+    | '/devices'
+    | '/licenses'
+    | '/login'
+    | '/plans'
+    | '/settings'
+    | '/licenses/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/audit'
+    | '/devices'
+    | '/licenses'
+    | '/login'
+    | '/plans'
+    | '/settings'
+    | '/licenses/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuditRoute: typeof AuditRoute
+  DevicesRoute: typeof DevicesRoute
+  LicensesRoute: typeof LicensesRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  PlansRoute: typeof PlansRoute
+  SettingsRoute: typeof SettingsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/plans': {
+      id: '/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof PlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/licenses': {
+      id: '/licenses'
+      path: '/licenses'
+      fullPath: '/licenses'
+      preLoaderRoute: typeof LicensesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/devices': {
+      id: '/devices'
+      path: '/devices'
+      fullPath: '/devices'
+      preLoaderRoute: typeof DevicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audit': {
+      id: '/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +184,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/licenses/$id': {
+      id: '/licenses/$id'
+      path: '/$id'
+      fullPath: '/licenses/$id'
+      preLoaderRoute: typeof LicensesIdRouteImport
+      parentRoute: typeof LicensesRoute
+    }
   }
 }
 
+interface LicensesRouteChildren {
+  LicensesIdRoute: typeof LicensesIdRoute
+}
+
+const LicensesRouteChildren: LicensesRouteChildren = {
+  LicensesIdRoute: LicensesIdRoute,
+}
+
+const LicensesRouteWithChildren = LicensesRoute._addFileChildren(
+  LicensesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuditRoute: AuditRoute,
+  DevicesRoute: DevicesRoute,
+  LicensesRoute: LicensesRouteWithChildren,
+  LoginRoute: LoginRoute,
+  PlansRoute: PlansRoute,
+  SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
