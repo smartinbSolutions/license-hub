@@ -23,14 +23,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-const nav = [
+const nav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { to: "/", label: "Overview", icon: LayoutDashboard, exact: true },
   { to: "/licenses", label: "Licenses", icon: KeyRound },
   { to: "/devices", label: "Devices", icon: Monitor },
   { to: "/plans", label: "Plans", icon: Package },
   { to: "/audit", label: "Audit log", icon: ScrollText },
   { to: "/settings", label: "Settings", icon: Settings },
-] as const;
+];
 
 export function DashboardLayout() {
   const { user, loading, logout } = useAuth();
