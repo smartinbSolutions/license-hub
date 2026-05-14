@@ -1,4 +1,4 @@
-# POS License Manager — Admin Dashboard
+# POS License Manager - Admin Dashboard
 
 A standalone admin web dashboard for managing offline-capable POS desktop app
 subscriptions and licenses. The Electron POS app stays offline after first
@@ -9,78 +9,108 @@ with an embedded public key.
 
 - React + TypeScript + TanStack Start
 - Tailwind CSS + shadcn/ui
-- Firebase Auth (email/password) + Firestore + Cloud Functions
+- MongoDB-backed admin login and password reset
+- Express API for license CRUD and activation
+- MongoDB persistence
 - Recharts
 
-## Project layout
+## Project Layout
 
-```
+```text
 src/
   components/        UI: layout, status badge, license form dialog
   lib/
-    firebase.ts      Firebase client (Auth/Firestore/Functions)
-    auth-context.tsx React context wrapping Firebase Auth
+    api-config.ts    API endpoint config
+    auth-context.tsx React context wrapping backend admin auth
+    license-service.ts REST client for the Express API
     types.ts         License/Plan/AuditLog types
     license-utils.ts Key generator, hash truncation, clipboard
-    mock-data.ts     Demo data (replace with Firestore queries)
+    mock-data.ts     Demo plans and non-license sample data
   routes/            File-based routes
-    login.tsx        /login
-    index.tsx        /          Overview
-    licenses.tsx     /licenses
-    licenses.$id.tsx /licenses/:id
-    devices.tsx      /devices
-    plans.tsx        /plans
-    audit.tsx        /audit
-    settings.tsx     /settings
-functions/           Firebase Cloud Functions (admin + activation)
-firestore.rules      Security rules outline
+server/
+  index.js           Express API for license CRUD and activation
+  model/db.js        MongoDB connection and collection indexes
+  keys/              RSA signing keypair used by activation
 ```
 
-## Wiring real data
+## Run Locally
 
-The dashboard ships with `src/lib/mock-data.ts` so the UI is immediately
-usable. To wire it to Firestore:
+Start the API server:
 
-1. Replace `mockLicenses`, `mockPlans`, `mockAuditLogs`, `mockActivationAttempts`
-   imports with TanStack Query hooks calling Firestore via the SDK
-   (`getDocs`, `onSnapshot`).
-2. Replace mutating `setLicenses(...)` calls in `routes/licenses.tsx` and
-   `routes/plans.tsx` with `httpsCallable(functions, 'createLicense'|...)`
-   calls and invalidate the relevant query keys.
-3. Set the admin custom claim on at least one Firebase Auth user:
-   ```js
-   admin.auth().setCustomUserClaims(uid, { admin: true })
-   ```
+```powershell
+$env:MONGODB_URI="mongodb+srv://me:1234@cluster0.wp09nak.mongodb.net/posLicense?appName=Cluster0"
+npm run dev:api
+```
 
-## Cloud Functions
+Start the dashboard in another terminal:
 
-See `functions/index.js`. Provides:
+```powershell
+npm run dev
+```
 
-| Function                 | Type        | Purpose                                |
-|--------------------------|-------------|----------------------------------------|
-| `createLicense`          | onCall      | Admin-only. Generates key, writes doc. |
-| `updateLicense`          | onCall      | Admin-only. Updates fields + audit.    |
-| `resetLicenseDevices`    | onCall      | Admin-only. Clears activations.        |
-| `deleteLicense`          | onCall      | Admin-only. Removes license.           |
-| `activateLicense`        | onRequest   | Public. Validates + signs payload.     |
+By default the dashboard calls:
 
-### Setup
+```text
+http://127.0.0.1:8787
+```
+
+The API reads MongoDB settings from:
+
+```text
+MONGODB_URI
+MONGODB_DB_NAME
+```
+
+On first startup, if no admin user exists, the API creates one from:
+
+```text
+ADMIN_EMAIL
+ADMIN_PASSWORD
+```
+
+Defaults are `admin@pos-license.local` / `admin123456`.
+
+Override it with:
+
+```powershell
+$env:VITE_API_BASE_URL="http://127.0.0.1:8787"
+npm run dev
+```
+
+## Signing Keys
+
+The Express API reads the private key from either:
+
+- `LICENSE_PRIVATE_KEY` environment variable
+- `server/keys/private.pem`
+
+Generate a keypair if needed:
 
 ```bash
-cd functions
-npm install
-openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
-openssl rsa -in private.pem -pubout -out public.pem
-firebase functions:secrets:set LICENSE_PRIVATE_KEY < private.pem
-firebase deploy --only functions
+mkdir -p server/keys
+openssl genpkey -algorithm RSA -out server/keys/private.pem -pkeyopt rsa_keygen_bits:2048
+openssl rsa -in server/keys/private.pem -pubout -out server/keys/public.pem
 ```
 
-Embed `public.pem` in the Electron app — never `private.pem`.
+Embed `server/keys/public.pem` in the Electron app. Never ship
+`server/keys/private.pem` to clients.
 
-## Activation flow (Electron client)
+## API Endpoints
+
+```text
+GET    /health
+GET    /api/licenses
+GET    /api/licenses/:id
+POST   /api/licenses
+PATCH  /api/licenses/:id
+POST   /api/licenses/:id/reset-devices
+DELETE /api/licenses/:id
+POST   /api/activateLicense
+```
+
+## Activation Flow
 
 ```js
-// In Electron main process, on first launch:
 const res = await fetch(ACTIVATION_ENDPOINT, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
@@ -91,6 +121,7 @@ const res = await fetch(ACTIVATION_ENDPOINT, {
     appVersion: app.getVersion(),
   }),
 });
+
 const { payload, signature } = await res.json();
 fs.writeFileSync(licensePath, JSON.stringify({ payload, signature }));
 ```
@@ -105,22 +136,15 @@ const ok = crypto.verify(
   PUBLIC_KEY_PEM,
   Buffer.from(signature, "base64")
 );
+
 if (!ok) throw new Error("License signature invalid");
 if (new Date(payload.expiresAt) < new Date()) throw new Error("License expired");
 if (payload.deviceHash !== currentDeviceHash) throw new Error("Bound to different device");
 ```
 
-## Security notes
+## Security Notes
 
 - The dashboard frontend never sees or signs with the private key.
-- All writes go through authenticated admin Cloud Functions.
-- Firestore rules deny all writes; reads gated on `request.auth.token.admin`.
-- Revocation only takes effect when a device reconnects (or its locally
-  signed payload expires). The dashboard surfaces this in the overview.
-- The public activation endpoint records every attempt to `activationAttempts`
-  for forensic visibility.
-
-## Firestore data model
-
-See `src/lib/types.ts`. Collections: `licenses`, `plans`, `auditLogs`,
-`activationAttempts`.
+- License and plan admin routes require an API admin session token.
+- Revocation only takes effect when a device reconnects or its local signed payload expires.
+- Activation attempts are recorded in the MongoDB `activationAttempts` collection.

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { useMemo, useState } from "react";
-import { mockLicenses, mockPlans } from "@/lib/mock-data";
+import { useEffect, useMemo, useState } from "react";
+import { mockPlans } from "@/lib/mock-data";
 import type { License, LicenseStatus } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,13 @@ import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/license-utils";
 import { LicenseFormDialog } from "@/components/license-form-dialog";
 import { format } from "date-fns";
+import {
+  createLicense,
+  deleteLicense,
+  resetLicenseDevices,
+  subscribeToLicenses,
+  updateLicense,
+} from "@/lib/license-service";
 
 export const Route = createFileRoute("/licenses")({
   component: () => (
@@ -59,7 +66,8 @@ export const Route = createFileRoute("/licenses")({
 
 function Licenses() {
   const navigate = useNavigate();
-  const [licenses, setLicenses] = useState<License[]>(mockLicenses);
+  const [licenses, setLicenses] = useState<License[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [planFilter, setPlanFilter] = useState<string>("all");
@@ -73,6 +81,23 @@ function Licenses() {
   const [confirm, setConfirm] = useState<{ id: string; action: "delete" | "revoke" | "reset" } | null>(
     null
   );
+
+  function showWriteError(error: unknown) {
+    toast.error(error instanceof Error ? error.message : "Unable to save license");
+  }
+
+  useEffect(() => {
+    return subscribeToLicenses(
+      (next) => {
+        setLicenses(next);
+        setLoading(false);
+      },
+      (error) => {
+        setLoading(false);
+        toast.error(error.message);
+      }
+    );
+  }, []);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -110,60 +135,48 @@ function Licenses() {
     setFormOpen(true);
   }
 
-  function handleSubmit(data: Partial<License>) {
-    if (editing) {
-      setLicenses((prev) =>
-        prev.map((l) =>
-          l.id === editing.id ? { ...l, ...data, updatedAt: new Date().toISOString() } : l
-        )
-      );
-      toast.success("License updated");
-    } else {
-      const id = `lic_${Math.random().toString(36).slice(2, 8)}`;
-      setLicenses((prev) => [
-        {
-          id,
-          activations: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          ...data,
-        } as License,
-        ...prev,
-      ]);
-      toast.success("License created");
+  async function handleSubmit(data: Partial<License>) {
+    try {
+      if (editing) {
+        await updateLicense(editing.id, data);
+        toast.success("License updated");
+      } else {
+        await createLicense(data);
+        toast.success("License created");
+      }
+      setFormOpen(false);
+    } catch (error) {
+      showWriteError(error);
     }
-    setFormOpen(false);
   }
 
-  function toggleStatus(l: License) {
+  async function toggleStatus(l: License) {
     const next: LicenseStatus = l.status === "active" ? "inactive" : "active";
-    setLicenses((prev) =>
-      prev.map((x) =>
-        x.id === l.id ? { ...x, status: next, updatedAt: new Date().toISOString() } : x
-      )
-    );
-    toast.success(`License ${next === "active" ? "activated" : "deactivated"}`);
+    try {
+      await updateLicense(l.id, { status: next });
+      toast.success(`License ${next === "active" ? "activated" : "deactivated"}`);
+    } catch (error) {
+      showWriteError(error);
+    }
   }
 
-  function performConfirm() {
+  async function performConfirm() {
     if (!confirm) return;
-    if (confirm.action === "delete") {
-      setLicenses((prev) => prev.filter((l) => l.id !== confirm.id));
-      toast.success("License deleted");
-    } else if (confirm.action === "revoke") {
-      setLicenses((prev) =>
-        prev.map((l) =>
-          l.id === confirm.id ? { ...l, status: "revoked" as LicenseStatus } : l
-        )
-      );
-      toast.success("License revoked. Devices will lose access at next reconnect.");
-    } else if (confirm.action === "reset") {
-      setLicenses((prev) =>
-        prev.map((l) => (l.id === confirm.id ? { ...l, activations: [] } : l))
-      );
-      toast.success("Devices reset");
+    try {
+      if (confirm.action === "delete") {
+        await deleteLicense(confirm.id);
+        toast.success("License deleted");
+      } else if (confirm.action === "revoke") {
+        await updateLicense(confirm.id, { status: "revoked" as LicenseStatus });
+        toast.success("License revoked. Devices will lose access at next reconnect.");
+      } else if (confirm.action === "reset") {
+        await resetLicenseDevices(confirm.id);
+        toast.success("Devices reset");
+      }
+      setConfirm(null);
+    } catch (error) {
+      showWriteError(error);
     }
-    setConfirm(null);
   }
 
   return (
@@ -253,7 +266,9 @@ function Licenses() {
                   <td colSpan={8} className="px-4 py-16 text-center">
                     <div className="mx-auto flex max-w-sm flex-col items-center gap-2 text-muted-foreground">
                       <KeyRound className="h-8 w-8" />
-                      <div className="text-sm font-medium text-foreground">No licenses</div>
+                      <div className="text-sm font-medium text-foreground">
+                        {loading ? "Loading licenses..." : "No licenses"}
+                      </div>
                       <p className="text-xs">
                         Adjust filters or create a license to get started.
                       </p>

@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Copy, Download, ShieldCheck, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/license-utils";
-import { ACTIVATION_ENDPOINT } from "@/lib/firebase";
+import { ACTIVATION_ENDPOINT } from "@/lib/api-config";
 import { useState } from "react";
 
 const SAMPLE_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
@@ -57,15 +57,14 @@ function Settings() {
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2 rounded-md bg-status-active/10 px-3 py-2 text-sm text-status-active ring-1 ring-status-active/20">
               <ShieldCheck className="h-4 w-4" />
-              Private key configured in Cloud Functions secret
+              Private key configured on the Express API server
               <code className="ml-auto rounded bg-background px-1.5 py-0.5 text-[11px]">
-                LICENSE_PRIVATE_KEY
+                server/keys/private.pem
               </code>
             </div>
             <p className="text-xs text-muted-foreground">
-              The private RSA-2048 key is stored as a secret accessible only to the{" "}
-              <code>activateLicense</code> Cloud Function. It is never exposed to the dashboard
-              frontend or to clients.
+              The private RSA-2048 key is read only by the Node activation endpoint. It is never
+              exposed to the dashboard frontend or to clients.
             </p>
             <div className="flex items-start gap-2 rounded-md bg-muted/60 p-3 text-xs text-muted-foreground">
               <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-status-expired" />
@@ -110,7 +109,7 @@ function Settings() {
             <CardTitle className="text-base">Activation endpoint</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Label>HTTPS Cloud Function URL</Label>
+            <Label>Activation API URL</Label>
             <div className="flex gap-2">
               <Input value={ACTIVATION_ENDPOINT} readOnly className="font-mono text-xs" />
               <Button
@@ -173,9 +172,8 @@ function Settings() {
           </CardHeader>
           <CardContent>
             <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-              Admin user management is configured in your Firebase project under Authentication →
-              Users. Custom claims (e.g. <code>admin: true</code>) gate access to admin-only Cloud
-              Functions.
+              Admin sign-in and password reset are handled by the Express API and stored in
+              MongoDB.
             </div>
           </CardContent>
         </Card>

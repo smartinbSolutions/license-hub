@@ -13,12 +13,14 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { user, loading, signIn, resetPassword } = useAuth();
+  const { user, loading, signIn, resetPassword, confirmPasswordReset } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
   useEffect(() => {
     if (!loading && user) navigate({ to: "/" });
@@ -34,7 +36,7 @@ function LoginPage() {
       navigate({ to: "/" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Sign in failed";
-      setError(msg.replace("Firebase: ", ""));
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -46,10 +48,27 @@ function LoginPage() {
       return;
     }
     try {
-      await resetPassword(email.trim());
-      toast.success("Password reset email sent");
+      const result = await resetPassword(email.trim());
+      if (result.resetToken) setResetToken(result.resetToken);
+      toast.success("Password reset token created");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not send reset");
+    }
+  }
+
+  async function onResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await confirmPasswordReset(resetToken.trim(), newPassword);
+      toast.success("Password updated. Sign in with the new password.");
+      setPassword("");
+      setNewPassword("");
+      setResetToken("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not reset password");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -83,7 +102,7 @@ function LoginPage() {
           </div>
           <h2 className="text-2xl font-semibold tracking-tight">Sign in</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Admin access only. Use your Firebase admin email.
+            Admin access only. Use your backend admin account.
           </p>
           <form onSubmit={onSubmit} className="mt-8 space-y-4">
             <div className="space-y-1.5">
@@ -128,8 +147,35 @@ function LoginPage() {
               Sign in
             </Button>
           </form>
+          {resetToken && (
+            <form onSubmit={onResetPassword} className="mt-5 space-y-3 rounded-md border border-border p-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="reset-token">Reset token</Label>
+                <Input
+                  id="reset-token"
+                  value={resetToken}
+                  onChange={(e) => setResetToken(e.target.value)}
+                  className="font-mono text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-password">New password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  minLength={8}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" variant="outline" className="w-full" disabled={submitting}>
+                Save new password
+              </Button>
+            </form>
+          )}
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            Protected by Firebase Authentication
+            Protected by the License API
           </p>
         </div>
       </div>

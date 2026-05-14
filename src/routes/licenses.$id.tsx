@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { mockLicenses, mockAuditLogs } from "@/lib/mock-data";
+import { mockAuditLogs } from "@/lib/mock-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,9 @@ import { ArrowLeft, Copy, Trash2, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { copyToClipboard, shortHash } from "@/lib/license-utils";
 import { toast } from "sonner";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { resetLicenseDevices, subscribeToLicense, updateLicense } from "@/lib/license-service";
+import type { License } from "@/lib/types";
 
 export const Route = createFileRoute("/licenses/$id")({
   component: () => (
@@ -21,13 +23,27 @@ export const Route = createFileRoute("/licenses/$id")({
 function Detail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
-  const initial = useMemo(() => mockLicenses.find((l) => l.id === id) ?? null, [id]);
-  const [license, setLicense] = useState(initial);
+  const [license, setLicense] = useState<License | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    return subscribeToLicense(
+      id,
+      (next) => {
+        setLicense(next);
+        setLoading(false);
+      },
+      (error) => {
+        setLoading(false);
+        toast.error(error.message);
+      }
+    );
+  }, [id]);
 
   if (!license) {
     return (
       <div className="text-center text-sm text-muted-foreground">
-        License not found.{" "}
+        {loading ? "Loading license..." : "License not found."}{" "}
         <Link to="/licenses" className="text-primary hover:underline">
           Back to licenses
         </Link>
@@ -52,11 +68,15 @@ function Detail() {
     2
   );
 
-  function removeDevice(hash: string) {
-    setLicense((l) =>
-      l ? { ...l, activations: l.activations.filter((a) => a.deviceHash !== hash) } : l
-    );
-    toast.success("Device removed from license");
+  async function removeDevice(hash: string) {
+    try {
+      await updateLicense(license.id, {
+        activations: license.activations.filter((a) => a.deviceHash !== hash),
+      });
+      toast.success("Device removed from license");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to remove device");
+    }
   }
 
   return (
@@ -139,9 +159,13 @@ function Detail() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              setLicense((l) => (l ? { ...l, activations: [] } : l));
-              toast.success("Devices reset");
+            onClick={async () => {
+              try {
+                await resetLicenseDevices(license.id);
+                toast.success("Devices reset");
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : "Unable to reset devices");
+              }
             }}
             className="gap-1.5"
             disabled={license.activations.length === 0}
@@ -232,8 +256,8 @@ function Detail() {
               {signedPreview}
             </pre>
             <p className="mt-3 text-xs text-muted-foreground">
-              The signature is generated server-side by the <code>activateLicense</code> Cloud
-              Function using RSA-SHA256. The Electron app verifies it with the embedded public key
+              The signature is generated server-side by the <code>activateLicense</code> Express
+              endpoint using RSA-SHA256. The Electron app verifies it with the embedded public key
               and stores the payload locally for offline use.
             </p>
           </CardContent>

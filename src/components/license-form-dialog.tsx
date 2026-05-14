@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +28,7 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   initial?: License | null;
-  onSubmit: (data: Partial<License>) => void;
+  onSubmit: (data: Partial<License>) => Promise<void> | void;
 }
 
 export function LicenseFormDialog({ open, onOpenChange, initial, onSubmit }: Props) {
@@ -53,6 +53,29 @@ export function LicenseFormDialog({ open, onOpenChange, initial, onSubmit }: Pro
     ).slice(0, 10)
   );
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const nextPlanId = initial?.planId ?? mockPlans[0]?.id ?? "";
+    const nextPlan = mockPlans.find((p) => p.id === nextPlanId);
+    const nextStartsAt = (initial?.startsAt ?? new Date().toISOString()).slice(0, 10);
+    const nextExpiresAt = (
+      initial?.expiresAt ??
+      new Date(Date.now() + (nextPlan?.durationDays ?? 365) * 86400_000).toISOString()
+    ).slice(0, 10);
+
+    setLicenseKey(initial?.licenseKey ?? generateLicenseKey());
+    setCustomerName(initial?.customerName ?? "");
+    setCustomerEmail(initial?.customerEmail ?? "");
+    setPlanId(nextPlanId);
+    setStatus(initial?.status ?? "active");
+    setMaxDevices(initial?.maxDevices ?? nextPlan?.maxDevices ?? 1);
+    setStartsAt(nextStartsAt);
+    setExpiresAt(nextExpiresAt);
+    setNotes(initial?.notes ?? "");
+  }, [initial, open]);
 
   function regen() {
     const k = generateLicenseKey();
@@ -65,25 +88,61 @@ export function LicenseFormDialog({ open, onOpenChange, initial, onSubmit }: Pro
     toast.success("License key copied");
   }
 
-  function submit(e: React.FormEvent) {
+  function changePlan(nextPlanId: string) {
+    const plan = mockPlans.find((p) => p.id === nextPlanId);
+    setPlanId(nextPlanId);
+    if (!plan) return;
+
+    setMaxDevices(plan.maxDevices);
+    if (!isEdit) {
+      const start = new Date(startsAt);
+      const expiry = new Date(start.getTime() + plan.durationDays * 86400_000);
+      setExpiresAt(expiry.toISOString().slice(0, 10));
+    }
+  }
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
+    const plan = mockPlans.find((p) => p.id === planId);
+
     if (!customerName.trim() || !customerEmail.trim()) {
       toast.error("Customer name and email are required");
       return;
     }
-    const plan = mockPlans.find((p) => p.id === planId);
-    onSubmit({
-      licenseKey,
-      customerName: customerName.trim(),
-      customerEmail: customerEmail.trim(),
-      planId,
-      planName: plan?.name,
-      status,
-      maxDevices: Number(maxDevices) || 1,
-      startsAt: new Date(startsAt).toISOString(),
-      expiresAt: new Date(expiresAt).toISOString(),
-      notes: notes.trim(),
-    });
+    if (!licenseKey.trim()) {
+      toast.error("License key is required");
+      return;
+    }
+    if (!plan) {
+      toast.error("Select a valid plan");
+      return;
+    }
+    if (!Number.isFinite(Number(maxDevices)) || Number(maxDevices) < 1) {
+      toast.error("Max devices must be at least 1");
+      return;
+    }
+    if (new Date(expiresAt).getTime() <= new Date(startsAt).getTime()) {
+      toast.error("Expiry date must be after the start date");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await onSubmit({
+        licenseKey: licenseKey.trim().toUpperCase(),
+        customerName: customerName.trim(),
+        customerEmail: customerEmail.trim(),
+        planId,
+        planName: plan.name,
+        status,
+        maxDevices: Number(maxDevices),
+        startsAt: new Date(startsAt).toISOString(),
+        expiresAt: new Date(expiresAt).toISOString(),
+        notes: notes.trim(),
+      });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -141,7 +200,7 @@ export function LicenseFormDialog({ open, onOpenChange, initial, onSubmit }: Pro
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label>Plan</Label>
-              <Select value={planId} onValueChange={setPlanId}>
+              <Select value={planId} onValueChange={changePlan}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -213,10 +272,12 @@ export function LicenseFormDialog({ open, onOpenChange, initial, onSubmit }: Pro
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit">{isEdit ? "Save changes" : "Create license"}</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving..." : isEdit ? "Save changes" : "Create license"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
