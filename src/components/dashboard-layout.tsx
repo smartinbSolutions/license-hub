@@ -32,7 +32,7 @@ const nav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: bo
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function DashboardLayout() {
+export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
