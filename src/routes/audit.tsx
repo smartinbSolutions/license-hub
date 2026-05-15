@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { mockAuditLogs, mockActivationAttempts } from "@/lib/mock-data";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
+import type { ActivationAttempt, AuditLog } from "@/lib/types";
+import { listActivationAttempts, listAuditLogs } from "@/lib/activity-service";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/audit")({
   component: () => (
@@ -27,27 +29,41 @@ function actionColor(action: string) {
 
 function Audit() {
   const [q, setQ] = useState("");
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [activationAttempts, setActivationAttempts] = useState<ActivationAttempt[]>([]);
+
+  useEffect(() => {
+    listAuditLogs()
+      .then(setAuditLogs)
+      .catch((error) =>
+        toast.error(error instanceof Error ? error.message : "Unable to load audit logs"),
+      );
+    listActivationAttempts()
+      .then(setActivationAttempts)
+      .catch((error) =>
+        toast.error(error instanceof Error ? error.message : "Unable to load activation attempts"),
+      );
+  }, []);
 
   const logs = useMemo(() => {
     const v = q.trim().toLowerCase();
-    if (!v) return mockAuditLogs;
-    return mockAuditLogs.filter(
+    if (!v) return auditLogs;
+    return auditLogs.filter(
       (l) =>
         l.action.toLowerCase().includes(v) ||
         l.adminEmail.toLowerCase().includes(v) ||
-        (l.licenseKey ?? "").toLowerCase().includes(v)
+        (l.licenseKey ?? "").toLowerCase().includes(v),
     );
-  }, [q]);
+  }, [auditLogs, q]);
 
   const attempts = useMemo(() => {
     const v = q.trim().toLowerCase();
-    if (!v) return mockActivationAttempts;
-    return mockActivationAttempts.filter(
+    if (!v) return activationAttempts;
+    return activationAttempts.filter(
       (a) =>
-        a.licenseKey.toLowerCase().includes(v) ||
-        (a.failureReason ?? "").toLowerCase().includes(v)
+        a.licenseKey.toLowerCase().includes(v) || (a.failureReason ?? "").toLowerCase().includes(v),
     );
-  }, [q]);
+  }, [activationAttempts, q]);
 
   return (
     <div className="space-y-6">
@@ -91,7 +107,10 @@ function Audit() {
                 </thead>
                 <tbody>
                   {logs.map((l) => (
-                    <tr key={l.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                    <tr
+                      key={l.id}
+                      className="border-b border-border last:border-0 hover:bg-muted/30"
+                    >
                       <td className="px-4 py-2.5 text-muted-foreground">
                         {format(new Date(l.createdAt), "MMM d, HH:mm")}
                       </td>
@@ -138,7 +157,10 @@ function Audit() {
                 </thead>
                 <tbody>
                   {attempts.map((a) => (
-                    <tr key={a.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                    <tr
+                      key={a.id}
+                      className="border-b border-border last:border-0 hover:bg-muted/30"
+                    >
                       <td className="px-4 py-2.5 text-muted-foreground">
                         {format(new Date(a.createdAt), "MMM d, HH:mm")}
                       </td>

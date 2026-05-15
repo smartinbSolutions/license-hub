@@ -25,7 +25,8 @@ src/
     license-service.ts REST client for the Express API
     types.ts         License/Plan/AuditLog types
     license-utils.ts Key generator, hash truncation, clipboard
-    mock-data.ts     Demo plans and non-license sample data
+    activity-service.ts REST client for audit logs and activation attempts
+    plan-service.ts REST client for subscription plan CRUD
   routes/            File-based routes
 server/
   index.js           Express API for license CRUD and activation
@@ -105,6 +106,13 @@ POST   /api/licenses
 PATCH  /api/licenses/:id
 POST   /api/licenses/:id/reset-devices
 DELETE /api/licenses/:id
+GET    /api/plans
+GET    /api/plans/:id
+POST   /api/plans
+PATCH  /api/plans/:id
+DELETE /api/plans/:id
+GET    /api/audit-logs
+GET    /api/activation-attempts
 POST   /api/activateLicense
 ```
 
@@ -134,7 +142,7 @@ const ok = crypto.verify(
   "RSA-SHA256",
   Buffer.from(JSON.stringify(payload)),
   PUBLIC_KEY_PEM,
-  Buffer.from(signature, "base64")
+  Buffer.from(signature, "base64"),
 );
 
 if (!ok) throw new Error("License signature invalid");

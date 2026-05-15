@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { mockPlans } from "@/lib/mock-data";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Plan } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { createPlan, deletePlan, listPlans, updatePlan } from "@/lib/plan-service";
 
 export const Route = createFileRoute("/plans")({
   component: () => (
@@ -29,13 +29,25 @@ export const Route = createFileRoute("/plans")({
 });
 
 function Plans() {
-  const [plans, setPlans] = useState<Plan[]>(mockPlans);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [editing, setEditing] = useState<Plan | null>(null);
   const [open, setOpen] = useState(false);
 
+  async function refreshPlans() {
+    try {
+      setPlans(await listPlans());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to load plans");
+    }
+  }
+
+  useEffect(() => {
+    void refreshPlans();
+  }, []);
+
   function startCreate() {
     setEditing({
-      id: `plan_${Math.random().toString(36).slice(2, 7)}`,
+      id: "",
       name: "",
       maxDevices: 1,
       durationDays: 365,
@@ -49,12 +61,38 @@ function Plans() {
     setOpen(true);
   }
 
-  function save(p: Plan) {
-    setPlans((prev) =>
-      prev.find((x) => x.id === p.id) ? prev.map((x) => (x.id === p.id ? p : x)) : [...prev, p]
-    );
-    toast.success("Plan saved");
-    setOpen(false);
+  async function save(p: Plan) {
+    try {
+      if (p?.id) {
+        await updatePlan(p?.id, p);
+      } else {
+        await createPlan(p);
+      }
+      await refreshPlans();
+      toast.success("Plan saved");
+      setOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to save plan");
+    }
+  }
+
+  async function removePlan(id: string) {
+    try {
+      await deletePlan(id);
+      await refreshPlans();
+      toast.success("Plan removed");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to remove plan");
+    }
+  }
+
+  async function togglePlan(p: Plan) {
+    try {
+      await updatePlan(p?.id, { status: p?.status === "active" ? "inactive" : "active" });
+      await refreshPlans();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update plan");
+    }
   }
 
   return (
@@ -73,36 +111,36 @@ function Plans() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {plans.map((p) => (
-          <Card key={p.id} className="flex flex-col">
+          <Card key={p?.id} className="flex flex-col">
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-lg">{p.name}</CardTitle>
-                  <div className="text-xs text-muted-foreground">{p.id}</div>
+                  <CardTitle className="text-lg">{p?.name}</CardTitle>
+                  <div className="text-xs text-muted-foreground">{p?.id}</div>
                 </div>
-                <Badge variant={p.status === "active" ? "default" : "secondary"}>
-                  {p.status}
+                <Badge variant={p?.status === "active" ? "default" : "secondary"}>
+                  {p?.status}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="flex flex-1 flex-col gap-4">
               <div>
-                <span className="text-3xl font-semibold">${p.price}</span>
-                <span className="text-sm text-muted-foreground"> / {p.durationDays}d</span>
+                <span className="text-3xl font-semibold">${p?.price}</span>
+                <span className="text-sm text-muted-foreground"> / {p?.durationDays}d</span>
               </div>
               <div className="grid gap-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Max devices</span>
-                  <span className="font-medium">{p.maxDevices}</span>
+                  <span className="font-medium">{p?.maxDevices}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Currency</span>
-                  <span className="font-medium">{p.currency}</span>
+                  <span className="font-medium">{p?.currency}</span>
                 </div>
               </div>
-              {p.features.length > 0 && (
+              {p?.features?.length > 0 && (
                 <ul className="space-y-1 text-sm text-muted-foreground">
-                  {p.features.map((f) => (
+                  {p?.features?.map((f) => (
                     <li key={f} className="flex items-start gap-2">
                       <span className="mt-1.5 h-1 w-1 rounded-full bg-primary" /> {f}
                     </li>
@@ -126,13 +164,7 @@ function Plans() {
                   size="sm"
                   className="gap-1.5"
                   onClick={() => {
-                    setPlans((prev) =>
-                      prev.map((x) =>
-                        x.id === p.id
-                          ? { ...x, status: x.status === "active" ? "inactive" : "active" }
-                          : x
-                      )
-                    );
+                    void togglePlan(p);
                   }}
                 >
                   <Power className="h-3.5 w-3.5" />
@@ -142,8 +174,7 @@ function Plans() {
                   size="sm"
                   className="gap-1.5 text-destructive"
                   onClick={() => {
-                    setPlans((prev) => prev.filter((x) => x.id !== p.id));
-                    toast.success("Plan removed");
+                    void removePlan(p?.id);
                   }}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -171,9 +202,12 @@ function PlanDialog({
   onSave: (p: Plan) => void;
 }) {
   const [draft, setDraft] = useState<Plan | null>(plan);
+  const [featuresText, setFeaturesText] = useState("");
 
-  // sync draft
-  if (plan && draft?.id !== plan.id) setDraft(plan);
+  useEffect(() => {
+    setDraft(plan);
+    setFeaturesText(plan?.features?.join("\n") ?? "");
+  }, [plan]);
   if (!draft) return null;
 
   return (
@@ -186,11 +220,17 @@ function PlanDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Name</Label>
-              <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+              <Input
+                value={draft.name}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Currency</Label>
-              <Input value={draft.currency} onChange={(e) => setDraft({ ...draft, currency: e.target.value })} />
+              <Input
+                value={draft.currency}
+                onChange={(e) => setDraft({ ...draft, currency: e.target.value })}
+              />
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
@@ -223,13 +263,18 @@ function PlanDialog({
             <Label>Features (one per line)</Label>
             <Textarea
               rows={4}
-              value={draft.features.join("\n")}
-              onChange={(e) =>
+              value={featuresText}
+              onChange={(e) => {
+                const nextFeaturesText = e.target.value;
+                setFeaturesText(nextFeaturesText);
                 setDraft({
                   ...draft,
-                  features: e.target.value.split("\n").map((f) => f.trim()).filter(Boolean),
-                })
-              }
+                  features: nextFeaturesText
+                    .split("\n")
+                    .map((f) => f.trim())
+                    .filter(Boolean),
+                });
+              }}
             />
           </div>
           <div className="flex items-center justify-between rounded-md border border-border p-3">
@@ -246,8 +291,21 @@ function PlanDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => onSave({ ...draft, updatedAt: new Date().toISOString() })}>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() =>
+              onSave({
+                ...draft,
+                features: featuresText
+                  .split("\n")
+                  .map((f) => f.trim())
+                  .filter(Boolean),
+                updatedAt: new Date().toISOString(),
+              })
+            }
+          >
             Save plan
           </Button>
         </DialogFooter>

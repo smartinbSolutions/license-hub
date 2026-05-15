@@ -1,6 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { mockAuditLogs } from "@/lib/mock-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,8 @@ import { copyToClipboard, shortHash } from "@/lib/license-utils";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { resetLicenseDevices, subscribeToLicense, updateLicense } from "@/lib/license-service";
-import type { License } from "@/lib/types";
+import { listAuditLogs } from "@/lib/activity-service";
+import type { AuditLog, License } from "@/lib/types";
 
 export const Route = createFileRoute("/licenses/$id")({
   component: () => (
@@ -24,6 +24,7 @@ function Detail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const [license, setLicense] = useState<License | null>(null);
+  const [events, setEvents] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,8 +37,16 @@ function Detail() {
       (error) => {
         setLoading(false);
         toast.error(error.message);
-      }
+      },
     );
+  }, [id]);
+
+  useEffect(() => {
+    listAuditLogs(id)
+      .then(setEvents)
+      .catch((error) =>
+        toast.error(error instanceof Error ? error.message : "Unable to load license events"),
+      );
   }, [id]);
 
   if (!license) {
@@ -51,7 +60,6 @@ function Detail() {
     );
   }
 
-  const events = mockAuditLogs.filter((a) => a.licenseId === license.id);
   const signedPreview = JSON.stringify(
     {
       payload: {
@@ -65,7 +73,7 @@ function Detail() {
       signature: "MEUCIQ…<base64-RSA-SHA256-signature>",
     },
     null,
-    2
+    2,
   );
 
   async function removeDevice(hash: string) {
@@ -90,9 +98,7 @@ function Detail() {
             <ArrowLeft className="h-3.5 w-3.5" /> All licenses
           </button>
           <div className="flex items-center gap-3">
-            <h1 className="font-mono text-xl font-semibold tracking-tight">
-              {license.licenseKey}
-            </h1>
+            <h1 className="font-mono text-xl font-semibold tracking-tight">{license.licenseKey}</h1>
             <StatusBadge status={license.status} />
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -113,14 +119,18 @@ function Detail() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Plan</CardTitle></CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Plan</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="text-lg font-semibold">{license.planName}</div>
             <div className="text-xs text-muted-foreground">Plan ID: {license.planId}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Device usage</CardTitle></CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Device usage</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="text-lg font-semibold">
               {license.activations.length}{" "}
@@ -139,7 +149,9 @@ function Detail() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Validity</CardTitle></CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Validity</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="text-sm">
               <span className="text-muted-foreground">Starts</span>{" "}
@@ -266,7 +278,9 @@ function Detail() {
 
       {license.notes && (
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Internal notes</CardTitle></CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Internal notes</CardTitle>
+          </CardHeader>
           <CardContent className="text-sm text-muted-foreground">{license.notes}</CardContent>
         </Card>
       )}

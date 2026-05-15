@@ -3,6 +3,7 @@ import express from "express";
 import { ensureIndexes } from "./model/db.js";
 import { requireAdmin } from "./middleware/requireAdmin.js";
 import { activationRouter } from "./route/activationRoutes.js";
+import { activationAttemptRouter, auditLogRouter } from "./route/activityRoutes.js";
 import { authRouter } from "./route/authRoutes.js";
 import { licenseRouter } from "./route/licenseRoutes.js";
 import { planRouter } from "./route/planRoutes.js";
@@ -19,9 +20,11 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api", activationRouter);
 app.use("/api/plans", requireAdmin, planRouter);
 app.use("/api/licenses", requireAdmin, licenseRouter);
-app.use("/api", activationRouter);
+app.use("/api/audit-logs", requireAdmin, auditLogRouter);
+app.use("/api/activation-attempts", requireAdmin, activationAttemptRouter);
 
 app.use((error, _req, res, _next) => {
   console.error(error);

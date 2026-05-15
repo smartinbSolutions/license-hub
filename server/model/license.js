@@ -1,6 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
 import { badRequest } from "./errors.js";
-import { findPlan } from "./plan.js";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 export const writableLicenseFields = [
@@ -52,15 +51,16 @@ export function publicLicense(license) {
   };
 }
 
-export function sanitizeLicenseInput(input) {
-  const plan = findPlan(String(input.planId || "").trim());
+export function sanitizeLicenseInput(input, plan) {
   const startsAt = input.startsAt ? new Date(input.startsAt) : new Date();
   const expiresAt = input.expiresAt
     ? new Date(input.expiresAt)
     : new Date(startsAt.getTime() + (plan?.durationDays ?? 365) * 86400_000);
 
   return {
-    licenseKey: String(input.licenseKey || generateLicenseKey()).trim().toUpperCase(),
+    licenseKey: String(input.licenseKey || generateLicenseKey())
+      .trim()
+      .toUpperCase(),
     customerName: String(input.customerName || "").trim(),
     customerEmail: String(input.customerEmail || "").trim(),
     planId: String(input.planId || "").trim(),
@@ -77,9 +77,6 @@ export function requireLicenseFields(license) {
   if (!license.customerName || !license.customerEmail || !license.planId || !license.expiresAt) {
     throw badRequest("Customer name, email, plan, and expiry are required");
   }
-  if (!findPlan(license.planId)) {
-    throw badRequest("A valid plan is required");
-  }
   if (!license.licenseKey || !license.licenseKey.startsWith("POS-")) {
     throw badRequest("A valid license key is required");
   }
@@ -93,7 +90,7 @@ export function requireLicenseFields(license) {
 
 export function sanitizeLicenseUpdates(input) {
   const updates = Object.fromEntries(
-    Object.entries(input ?? {}).filter(([key]) => writableLicenseFields.includes(key))
+    Object.entries(input ?? {}).filter(([key]) => writableLicenseFields.includes(key)),
   );
 
   if (updates.licenseKey) updates.licenseKey = String(updates.licenseKey).trim().toUpperCase();

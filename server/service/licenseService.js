@@ -1,4 +1,4 @@
-import { conflict, notFound } from "../model/errors.js";
+import { badRequest, conflict, notFound } from "../model/errors.js";
 import { getCollections } from "../model/db.js";
 import {
   generateId,
@@ -35,8 +35,12 @@ export async function getLicense(id) {
 }
 
 export async function createLicense(input) {
-  const { licenses, auditLogs } = await getCollections();
-  const data = sanitizeLicenseInput(input ?? {});
+  const { licenses, plans, auditLogs } = await getCollections();
+  const planId = String(input?.planId || "").trim();
+  const plan = planId ? withoutMongoId(await plans.findOne({ id: planId })) : null;
+  if (!plan) throw badRequest("A valid plan is required");
+
+  const data = sanitizeLicenseInput(input ?? {}, plan);
   requireLicenseFields(data);
 
   const existing = await licenses.findOne({ licenseKey: data.licenseKey });
@@ -65,9 +69,16 @@ export async function createLicense(input) {
 }
 
 export async function updateLicense(id, input) {
-  const { licenses, auditLogs } = await getCollections();
+  const { licenses, plans, auditLogs } = await getCollections();
   const existing = await findLicenseOrThrow(licenses, id);
   const updates = sanitizeLicenseUpdates(input);
+
+  if (updates.planId && updates.planId !== existing.planId) {
+    const plan = withoutMongoId(await plans.findOne({ id: updates.planId }));
+    if (!plan) throw badRequest("A valid plan is required");
+    updates.planName = plan.name;
+    if (input.maxDevices === undefined) updates.maxDevices = plan.maxDevices;
+  }
 
   if (updates.licenseKey && updates.licenseKey !== existing.licenseKey) {
     const duplicate = await licenses.findOne({ licenseKey: updates.licenseKey });
@@ -77,7 +88,9 @@ export async function updateLicense(id, input) {
   const nextLicense = {
     ...existing,
     ...updates,
-    licenseKeyHash: updates.licenseKey ? hashLicenseKey(updates.licenseKey) : existing.licenseKeyHash,
+    licenseKeyHash: updates.licenseKey
+      ? hashLicenseKey(updates.licenseKey)
+      : existing.licenseKeyHash,
     updatedAt: now(),
     updatedBy: "local-admin",
   };

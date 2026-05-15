@@ -9,7 +9,7 @@ activationRouter.post("/activateLicense", async (req, res, next) => {
       await activateLicense({
         ...(req.body ?? {}),
         ipAddress: req.ip,
-      })
+      }),
     );
   } catch (error) {
     next(error);

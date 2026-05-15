@@ -21,22 +21,19 @@ import {
 import { Copy, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard, generateLicenseKey } from "@/lib/license-utils";
-import type { License, LicenseStatus } from "@/lib/types";
-import { mockPlans } from "@/lib/mock-data";
+import type { License, LicenseStatus, Plan } from "@/lib/types";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   initial?: License | null;
+  plans: Plan[];
   onSubmit: (data: Partial<License>) => Promise<void> | void;
 }
 
-export function LicenseFormDialog({ open, onOpenChange, initial, onSubmit }: Props) {
+export function LicenseFormDialog({ open, onOpenChange, initial, plans, onSubmit }: Props) {
   const isEdit = !!initial;
-  const defaultPlan = useMemo(
-    () => initial?.planId ?? mockPlans[0]?.id ?? "",
-    [initial]
-  );
+  const defaultPlan = useMemo(() => initial?.planId ?? plans[0]?.id ?? "", [initial, plans]);
   const [licenseKey, setLicenseKey] = useState(initial?.licenseKey ?? generateLicenseKey());
   const [customerName, setCustomerName] = useState(initial?.customerName ?? "");
   const [customerEmail, setCustomerEmail] = useState(initial?.customerEmail ?? "");
@@ -44,13 +41,10 @@ export function LicenseFormDialog({ open, onOpenChange, initial, onSubmit }: Pro
   const [status, setStatus] = useState<LicenseStatus>(initial?.status ?? "active");
   const [maxDevices, setMaxDevices] = useState(initial?.maxDevices ?? 1);
   const [startsAt, setStartsAt] = useState(
-    (initial?.startsAt ?? new Date().toISOString()).slice(0, 10)
+    (initial?.startsAt ?? new Date().toISOString()).slice(0, 10),
   );
   const [expiresAt, setExpiresAt] = useState(
-    (
-      initial?.expiresAt ??
-      new Date(Date.now() + 365 * 86400_000).toISOString()
-    ).slice(0, 10)
+    (initial?.expiresAt ?? new Date(Date.now() + 365 * 86400_000).toISOString()).slice(0, 10),
   );
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [saving, setSaving] = useState(false);
@@ -58,8 +52,8 @@ export function LicenseFormDialog({ open, onOpenChange, initial, onSubmit }: Pro
   useEffect(() => {
     if (!open) return;
 
-    const nextPlanId = initial?.planId ?? mockPlans[0]?.id ?? "";
-    const nextPlan = mockPlans.find((p) => p.id === nextPlanId);
+    const nextPlanId = initial?.planId ?? plans[0]?.id ?? "";
+    const nextPlan = plans.find((p) => p.id === nextPlanId);
     const nextStartsAt = (initial?.startsAt ?? new Date().toISOString()).slice(0, 10);
     const nextExpiresAt = (
       initial?.expiresAt ??
@@ -75,7 +69,7 @@ export function LicenseFormDialog({ open, onOpenChange, initial, onSubmit }: Pro
     setStartsAt(nextStartsAt);
     setExpiresAt(nextExpiresAt);
     setNotes(initial?.notes ?? "");
-  }, [initial, open]);
+  }, [initial, open, plans]);
 
   function regen() {
     const k = generateLicenseKey();
@@ -89,7 +83,7 @@ export function LicenseFormDialog({ open, onOpenChange, initial, onSubmit }: Pro
   }
 
   function changePlan(nextPlanId: string) {
-    const plan = mockPlans.find((p) => p.id === nextPlanId);
+    const plan = plans.find((p) => p.id === nextPlanId);
     setPlanId(nextPlanId);
     if (!plan) return;
 
@@ -103,7 +97,7 @@ export function LicenseFormDialog({ open, onOpenChange, initial, onSubmit }: Pro
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const plan = mockPlans.find((p) => p.id === planId);
+    const plan = plans.find((p) => p.id === planId);
 
     if (!customerName.trim() || !customerEmail.trim()) {
       toast.error("Customer name and email are required");
@@ -166,7 +160,13 @@ export function LicenseFormDialog({ open, onOpenChange, initial, onSubmit }: Pro
                 onChange={(e) => setLicenseKey(e.target.value)}
                 className="font-mono text-xs"
               />
-              <Button type="button" variant="outline" size="icon" onClick={regen} title="Regenerate">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={regen}
+                title="Regenerate"
+              >
                 <Wand2 className="h-4 w-4" />
               </Button>
               <Button type="button" variant="outline" size="icon" onClick={copyKey} title="Copy">
@@ -205,7 +205,7 @@ export function LicenseFormDialog({ open, onOpenChange, initial, onSubmit }: Pro
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockPlans.map((p) => (
+                  {plans.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
                     </SelectItem>
@@ -272,7 +272,12 @@ export function LicenseFormDialog({ open, onOpenChange, initial, onSubmit }: Pro
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={saving}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={saving}>

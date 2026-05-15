@@ -1,15 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { mockLicenses } from "@/lib/mock-data";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { copyToClipboard, shortHash } from "@/lib/license-utils";
 import { toast } from "sonner";
 import { Copy, Eye, Search, Monitor, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { StatusBadge } from "@/components/status-badge";
+import { subscribeToLicenses, updateLicense } from "@/lib/license-service";
+import type { License } from "@/lib/types";
 
 export const Route = createFileRoute("/devices")({
   component: () => (
@@ -34,16 +35,24 @@ interface Row {
 function Devices() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [data, setData] = useState<Row[]>(() =>
-    mockLicenses.flatMap((l) =>
-      l.activations.map((a) => ({
-        ...a,
-        licenseKey: l.licenseKey,
-        licenseId: l.id,
-        customer: l.customerName,
-        status: l.status,
-      }))
-    )
+  const [licenses, setLicenses] = useState<License[]>([]);
+
+  useEffect(() => {
+    return subscribeToLicenses(setLicenses, (error) => toast.error(error.message));
+  }, []);
+
+  const data = useMemo(
+    () =>
+      licenses.flatMap((l) =>
+        l.activations.map((a) => ({
+          ...a,
+          licenseKey: l.licenseKey,
+          licenseId: l.id,
+          customer: l.customerName,
+          status: l.status,
+        })),
+      ),
+    [licenses],
   );
 
   const filtered = useMemo(() => {
@@ -54,7 +63,7 @@ function Devices() {
         r.deviceHash.toLowerCase().includes(q) ||
         r.deviceName.toLowerCase().includes(q) ||
         r.licenseKey.toLowerCase().includes(q) ||
-        r.customer.toLowerCase().includes(q)
+        r.customer.toLowerCase().includes(q),
     );
   }, [data, search]);
 
@@ -62,9 +71,7 @@ function Devices() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Devices</h1>
-        <p className="text-sm text-muted-foreground">
-          All devices currently bound to a license.
-        </p>
+        <p className="text-sm text-muted-foreground">All devices currently bound to a license.</p>
       </div>
 
       <Card className="p-3">
@@ -108,7 +115,10 @@ function Devices() {
                 </tr>
               )}
               {filtered.map((r) => (
-                <tr key={r.deviceHash} className="border-b border-border last:border-0 hover:bg-muted/30">
+                <tr
+                  key={r.deviceHash}
+                  className="border-b border-border last:border-0 hover:bg-muted/30"
+                >
                   <td className="px-4 py-2.5 font-medium">{r.deviceName}</td>
                   <td className="px-3 py-2.5 font-mono text-[11px]" title={r.deviceHash}>
                     {shortHash(r.deviceHash)}
@@ -122,9 +132,13 @@ function Devices() {
                     {format(new Date(r.activatedAt), "MMM d, yyyy")}
                   </td>
                   <td className="px-3 py-2.5 text-muted-foreground">
-                    {r.lastSeenAt ? formatDistanceToNow(new Date(r.lastSeenAt), { addSuffix: true }) : "—"}
+                    {r.lastSeenAt
+                      ? formatDistanceToNow(new Date(r.lastSeenAt), { addSuffix: true })
+                      : "—"}
                   </td>
-                  <td className="px-3 py-2.5"><StatusBadge status={r.status} /></td>
+                  <td className="px-3 py-2.5">
+                    <StatusBadge status={r.status} />
+                  </td>
                   <td className="px-3 py-2.5">
                     <div className="flex items-center justify-end gap-1">
                       <Button
@@ -144,7 +158,9 @@ function Devices() {
                         size="icon"
                         className="h-8 w-8"
                         title="View license"
-                        onClick={() => navigate({ to: "/licenses/$id", params: { id: r.licenseId } as never })}
+                        onClick={() =>
+                          navigate({ to: "/licenses/$id", params: { id: r.licenseId } as never })
+                        }
                       >
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
@@ -153,9 +169,21 @@ function Devices() {
                         size="icon"
                         className="h-8 w-8 text-destructive"
                         title="Remove device"
-                        onClick={() => {
-                          setData((d) => d.filter((x) => x.deviceHash !== r.deviceHash));
-                          toast.success("Device removed from license");
+                        onClick={async () => {
+                          const license = licenses.find((item) => item.id === r.licenseId);
+                          if (!license) return;
+                          try {
+                            await updateLicense(license.id, {
+                              activations: license.activations.filter(
+                                (activation) => activation.deviceHash !== r.deviceHash,
+                              ),
+                            });
+                            toast.success("Device removed from license");
+                          } catch (error) {
+                            toast.error(
+                              error instanceof Error ? error.message : "Unable to remove device",
+                            );
+                          }
                         }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />

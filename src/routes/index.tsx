@@ -1,19 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  mockLicenses,
-  mockActivationSeries,
-  mockPlans,
-} from "@/lib/mock-data";
-import {
-  KeyRound,
-  CheckCircle2,
-  Clock,
-  Monitor,
-  PackageOpen,
-  Activity,
-} from "lucide-react";
+import { KeyRound, CheckCircle2, Clock, Monitor, PackageOpen, Activity } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -30,6 +18,12 @@ import {
 } from "recharts";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDistanceToNow } from "date-fns";
+import { useEffect, useMemo, useState } from "react";
+import type { ActivationAttempt, License, Plan } from "@/lib/types";
+import { subscribeToLicenses } from "@/lib/license-service";
+import { listPlans } from "@/lib/plan-service";
+import { listActivationAttempts } from "@/lib/activity-service";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   component: () => (
@@ -40,15 +34,56 @@ export const Route = createFileRoute("/")({
 });
 
 function Overview() {
-  const total = mockLicenses.length;
-  const active = mockLicenses.filter((l) => l.status === "active").length;
-  const expired = mockLicenses.filter((l) => l.status === "expired").length;
-  const devices = mockLicenses.reduce((s, l) => s + l.activations.length, 0);
-  const unused = mockLicenses.filter((l) => l.activations.length === 0).length;
+  const [licenses, setLicenses] = useState<License[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [attempts, setAttempts] = useState<ActivationAttempt[]>([]);
 
-  const recent = mockLicenses
+  useEffect(() => {
+    return subscribeToLicenses(setLicenses, (error) => toast.error(error.message));
+  }, []);
+
+  useEffect(() => {
+    listPlans()
+      .then(setPlans)
+      .catch((error) =>
+        toast.error(error instanceof Error ? error.message : "Unable to load plans"),
+      );
+    listActivationAttempts()
+      .then(setAttempts)
+      .catch((error) =>
+        toast.error(error instanceof Error ? error.message : "Unable to load activations"),
+      );
+  }, []);
+
+  const activationSeries = useMemo(() => {
+    const days = Array.from({ length: 30 }).map((_, i) => {
+      const date = new Date(Date.now() - (29 - i) * 86400_000);
+      return {
+        key: date.toISOString().slice(0, 10),
+        date: date.toISOString().slice(5, 10),
+        activations: 0,
+      };
+    });
+    const byDate = new Map(days.map((day) => [day.key, day]));
+    attempts
+      .filter((attempt) => attempt.success)
+      .forEach((attempt) => {
+        const key = new Date(attempt.createdAt).toISOString().slice(0, 10);
+        const day = byDate.get(key);
+        if (day) day.activations += 1;
+      });
+    return days;
+  }, [attempts]);
+
+  const total = licenses.length;
+  const active = licenses.filter((l) => l.status === "active").length;
+  const expired = licenses.filter((l) => l.status === "expired").length;
+  const devices = licenses.reduce((s, l) => s + l.activations.length, 0);
+  const unused = licenses.filter((l) => l.activations.length === 0).length;
+
+  const recent = licenses
     .flatMap((l) =>
-      l.activations.map((a) => ({ ...a, customer: l.customerName, key: l.licenseKey }))
+      l.activations.map((a) => ({ ...a, customer: l.customerName, key: l.licenseKey })),
     )
     .sort((a, b) => +new Date(b.activatedAt) - +new Date(a.activatedAt))
     .slice(0, 5);
@@ -57,20 +92,20 @@ function Overview() {
     { name: "Active", value: active, color: "oklch(0.65 0.16 155)" },
     {
       name: "Inactive",
-      value: mockLicenses.filter((l) => l.status === "inactive").length,
+      value: licenses.filter((l) => l.status === "inactive").length,
       color: "oklch(0.65 0.03 258)",
     },
     { name: "Expired", value: expired, color: "oklch(0.7 0.16 70)" },
     {
       name: "Revoked",
-      value: mockLicenses.filter((l) => l.status === "revoked").length,
+      value: licenses.filter((l) => l.status === "revoked").length,
       color: "oklch(0.6 0.23 27)",
     },
   ].filter((s) => s.value > 0);
 
-  const planUsage = mockPlans.map((p) => ({
+  const planUsage = plans.map((p) => ({
     name: p.name,
-    licenses: mockLicenses.filter((l) => l.planId === p.id).length,
+    licenses: licenses.filter((l) => l.planId === p.id).length,
   }));
 
   const cards = [
@@ -81,7 +116,7 @@ function Overview() {
     { label: "Unused licenses", value: unused, icon: PackageOpen, hint: "No device bound" },
     {
       label: "Activations (30d)",
-      value: mockActivationSeries.reduce((s, d) => s + d.activations, 0),
+      value: activationSeries.reduce((s, d) => s + d.activations, 0),
       icon: Activity,
       hint: "First-time + reactivations",
     },
@@ -103,9 +138,7 @@ function Overview() {
             <Card key={c.label} className="gap-2 py-4">
               <CardContent className="px-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {c.label}
-                  </span>
+                  <span className="text-xs font-medium text-muted-foreground">{c.label}</span>
                   <Icon className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="mt-2 text-2xl font-semibold tracking-tight">{c.value}</div>
@@ -123,7 +156,7 @@ function Overview() {
           </CardHeader>
           <CardContent className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={mockActivationSeries}>
+              <AreaChart data={activationSeries}>
                 <defs>
                   <linearGradient id="actFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="oklch(0.55 0.22 268)" stopOpacity={0.4} />
@@ -185,10 +218,7 @@ function Overview() {
             <div className="mt-2 grid grid-cols-2 gap-1 text-xs">
               {statusPie.map((s) => (
                 <div key={s.name} className="flex items-center gap-1.5">
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ background: s.color }}
-                  />
+                  <span className="h-2 w-2 rounded-full" style={{ background: s.color }} />
                   <span className="text-muted-foreground">{s.name}</span>
                   <span className="ml-auto font-medium">{s.value}</span>
                 </div>

@@ -25,6 +25,7 @@ export async function getCollections() {
 
   return {
     licenses: db.collection("licenses"),
+    plans: db.collection("plans"),
     auditLogs: db.collection("auditLogs"),
     activationAttempts: db.collection("activationAttempts"),
     adminUsers: db.collection("adminUsers"),
@@ -34,13 +35,22 @@ export async function getCollections() {
 }
 
 export async function ensureIndexes() {
-  const { licenses, auditLogs, activationAttempts, adminUsers, adminSessions, adminPasswordResets } =
-    await getCollections();
+  const {
+    licenses,
+    plans,
+    auditLogs,
+    activationAttempts,
+    adminUsers,
+    adminSessions,
+    adminPasswordResets,
+  } = await getCollections();
 
   await Promise.all([
     licenses.createIndex({ id: 1 }, { unique: true }),
     licenses.createIndex({ licenseKey: 1 }, { unique: true }),
     licenses.createIndex({ createdAt: -1 }),
+    plans.createIndex({ id: 1 }, { unique: true }),
+    plans.createIndex({ createdAt: -1 }),
     auditLogs.createIndex({ createdAt: -1 }),
     activationAttempts.createIndex({ createdAt: -1 }),
     adminUsers.createIndex({ id: 1 }, { unique: true }),

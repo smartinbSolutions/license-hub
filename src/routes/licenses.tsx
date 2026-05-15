@@ -1,8 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { useEffect, useMemo, useState } from "react";
-import { mockPlans } from "@/lib/mock-data";
-import type { License, LicenseStatus } from "@/lib/types";
+import type { License, LicenseStatus, Plan } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -55,6 +54,7 @@ import {
   subscribeToLicenses,
   updateLicense,
 } from "@/lib/license-service";
+import { listPlans } from "@/lib/plan-service";
 
 export const Route = createFileRoute("/licenses")({
   component: () => (
@@ -67,6 +67,7 @@ export const Route = createFileRoute("/licenses")({
 function Licenses() {
   const navigate = useNavigate();
   const [licenses, setLicenses] = useState<License[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -78,9 +79,10 @@ function Licenses() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<License | null>(null);
-  const [confirm, setConfirm] = useState<{ id: string; action: "delete" | "revoke" | "reset" } | null>(
-    null
-  );
+  const [confirm, setConfirm] = useState<{
+    id: string;
+    action: "delete" | "revoke" | "reset";
+  } | null>(null);
 
   function showWriteError(error: unknown) {
     toast.error(error instanceof Error ? error.message : "Unable to save license");
@@ -95,8 +97,16 @@ function Licenses() {
       (error) => {
         setLoading(false);
         toast.error(error.message);
-      }
+      },
     );
+  }, []);
+
+  useEffect(() => {
+    listPlans()
+      .then((next) => setPlans(next.filter((plan) => plan.status === "active")))
+      .catch((error) =>
+        toast.error(error instanceof Error ? error.message : "Unable to load plans"),
+      );
   }, []);
 
   const filtered = useMemo(() => {
@@ -207,8 +217,16 @@ function Licenses() {
               className="pl-8"
             />
           </div>
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0); }}>
-            <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => {
+              setStatusFilter(v);
+              setPage(0);
+            }}
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="active">Active</SelectItem>
@@ -217,25 +235,51 @@ function Licenses() {
               <SelectItem value="revoked">Revoked</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={planFilter} onValueChange={(v) => { setPlanFilter(v); setPage(0); }}>
-            <SelectTrigger className="w-36"><SelectValue placeholder="Plan" /></SelectTrigger>
+          <Select
+            value={planFilter}
+            onValueChange={(v) => {
+              setPlanFilter(v);
+              setPage(0);
+            }}
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Plan" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All plans</SelectItem>
-              {mockPlans.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              {plans.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={expiryFilter} onValueChange={(v) => { setExpiryFilter(v); setPage(0); }}>
-            <SelectTrigger className="w-40"><SelectValue placeholder="Expiry" /></SelectTrigger>
+          <Select
+            value={expiryFilter}
+            onValueChange={(v) => {
+              setExpiryFilter(v);
+              setPage(0);
+            }}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Expiry" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Any expiry</SelectItem>
               <SelectItem value="expiring">Expiring (30d)</SelectItem>
               <SelectItem value="past">Past expiry</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={usageFilter} onValueChange={(v) => { setUsageFilter(v); setPage(0); }}>
-            <SelectTrigger className="w-40"><SelectValue placeholder="Device usage" /></SelectTrigger>
+          <Select
+            value={usageFilter}
+            onValueChange={(v) => {
+              setUsageFilter(v);
+              setPage(0);
+            }}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Device usage" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Any usage</SelectItem>
               <SelectItem value="unused">Unused</SelectItem>
@@ -269,9 +313,7 @@ function Licenses() {
                       <div className="text-sm font-medium text-foreground">
                         {loading ? "Loading licenses..." : "No licenses"}
                       </div>
-                      <p className="text-xs">
-                        Adjust filters or create a license to get started.
-                      </p>
+                      <p className="text-xs">Adjust filters or create a license to get started.</p>
                     </div>
                   </td>
                 </tr>
@@ -282,13 +324,12 @@ function Licenses() {
                   .sort()
                   .pop();
                 return (
-                  <tr
-                    key={l.id}
-                    className="border-b border-border last:border-0 hover:bg-muted/30"
-                  >
+                  <tr key={l.id} className="border-b border-border last:border-0 hover:bg-muted/30">
                     <td className="px-4 py-2.5">
                       <button
-                        onClick={() => navigate({ to: "/licenses/$id", params: { id: l.id } as never })}
+                        onClick={() =>
+                          navigate({ to: "/licenses/$id", params: { id: l.id } as never })
+                        }
                         className="font-mono text-[11px] text-foreground hover:text-primary"
                       >
                         {l.licenseKey}
@@ -299,7 +340,9 @@ function Licenses() {
                       <div className="text-[11px] text-muted-foreground">{l.customerEmail}</div>
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground">{l.planName}</td>
-                    <td className="px-3 py-2.5"><StatusBadge status={l.status} /></td>
+                    <td className="px-3 py-2.5">
+                      <StatusBadge status={l.status} />
+                    </td>
                     <td className="px-3 py-2.5">
                       <span className="font-medium">{l.activations.length}</span>
                       <span className="text-muted-foreground"> / {l.maxDevices}</span>
@@ -318,7 +361,11 @@ function Licenses() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onClick={() => navigate({ to: "/licenses/$id", params: { id: l.id } as never })}>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              navigate({ to: "/licenses/$id", params: { id: l.id } as never })
+                            }
+                          >
                             <Eye className="mr-2 h-4 w-4" /> View details
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEdit(l)}>
@@ -337,7 +384,9 @@ function Licenses() {
                             <Power className="mr-2 h-4 w-4" />
                             {l.status === "active" ? "Deactivate" : "Activate"}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setConfirm({ id: l.id, action: "reset" })}>
+                          <DropdownMenuItem
+                            onClick={() => setConfirm({ id: l.id, action: "reset" })}
+                          >
                             <RotateCcw className="mr-2 h-4 w-4" /> Reset devices
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -394,6 +443,7 @@ function Licenses() {
         open={formOpen}
         onOpenChange={setFormOpen}
         initial={editing}
+        plans={plans}
         onSubmit={handleSubmit}
       />
 
@@ -418,7 +468,9 @@ function Licenses() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={performConfirm}
-              className={confirm?.action === "delete" ? "bg-destructive hover:bg-destructive/90" : ""}
+              className={
+                confirm?.action === "delete" ? "bg-destructive hover:bg-destructive/90" : ""
+              }
             >
               Confirm
             </AlertDialogAction>
