@@ -23,13 +23,41 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-const nav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
-  { to: "/", label: "Overview", icon: LayoutDashboard, exact: true },
-  { to: "/licenses", label: "Licenses", icon: KeyRound },
-  { to: "/devices", label: "Devices", icon: Monitor },
-  { to: "/plans", label: "Plans", icon: Package },
-  { to: "/audit", label: "Audit log", icon: ScrollText },
-  { to: "/settings", label: "Settings", icon: Settings },
+const navGroups = [
+  {
+    title: "Local POS",
+    items: [
+      { to: "/", label: "Overview", icon: LayoutDashboard, exact: true },
+      { to: "/licenses", label: "Licenses", icon: KeyRound },
+      { to: "/devices", label: "Devices", icon: Monitor },
+      { to: "/plans", label: "Plans", icon: Package },
+    ],
+  },
+  {
+    title: "SY ERP",
+    items: [
+      { to: "/sy-erp", label: "Overview", icon: LayoutDashboard, exact: true },
+      { to: "/sy-erp/licenses", label: "Licenses", icon: KeyRound },
+      { to: "/sy-erp/devices", label: "Devices", icon: Monitor },
+      { to: "/sy-erp/plans", label: "Plans", icon: Package },
+    ],
+  },
+  {
+    title: "TR ERP",
+    items: [
+      { to: "/tr-erp", label: "Overview", icon: LayoutDashboard, exact: true },
+      { to: "/tr-erp/licenses", label: "Licenses", icon: KeyRound },
+      { to: "/tr-erp/devices", label: "Devices", icon: Monitor },
+      { to: "/tr-erp/plans", label: "Plans", icon: Package },
+    ],
+  },
+  {
+    title: "Administration",
+    items: [
+      { to: "/audit", label: "Audit log", icon: ScrollText },
+      { to: "/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 export function DashboardLayout({ children }: { children?: React.ReactNode }) {
@@ -64,31 +92,42 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
           </div>
         </div>
         <nav className="flex-1 px-3">
-          <ul className="space-y-0.5">
-            {nav.map((item) => {
-              const Icon = item.icon;
-              const active = item.exact
-                ? location.pathname === item.to
-                : location.pathname === item.to ||
-                  location.pathname.startsWith(item.to + "/");
-              return (
-                <li key={item.to}>
-                  <Link
-                    to={item.to as never}
-                    className={
-                      "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors " +
-                      (active
-                        ? "bg-accent text-accent-foreground"
-                        : "text-muted-foreground hover:bg-accent/60 hover:text-foreground")
-                    }
-                  >
-                    <Icon className="h-4 w-4" />
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          {navGroups.map((group, groupIndex) => (
+            <div key={group.title}>
+              {groupIndex > 0 && <div className="my-4 border-t border-border" />}
+
+              <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {group.title}
+              </div>
+
+              <ul className="space-y-0.5">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+
+                  const active = item.exact
+                    ? location.pathname === item.to
+                    : location.pathname === item.to || location.pathname.startsWith(item.to + "/");
+
+                  return (
+                    <li key={item.to}>
+                      <Link
+                        to={item.to as never}
+                        className={
+                          "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors " +
+                          (active
+                            ? "bg-accent text-accent-foreground"
+                            : "text-muted-foreground hover:bg-accent/60 hover:text-foreground")
+                        }
+                      >
+                        <Icon className="h-4 w-4" />
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
         </nav>
         <div className="border-t border-border p-3">
           <div className="rounded-md bg-muted/60 px-3 py-2 text-[11px] text-muted-foreground">
@@ -101,9 +140,7 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur md:px-6">
           <div className="flex items-center gap-3">
             <img src={logo} alt="" className="h-7 w-7 rounded-md md:hidden" />
-            <span className="text-sm font-medium text-muted-foreground">
-              POS License Manager
-            </span>
+            <span className="text-sm font-medium text-muted-foreground">POS License Manager</span>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

@@ -16,7 +16,17 @@ import { Route as LicensesRouteImport } from './routes/licenses'
 import { Route as DevicesRouteImport } from './routes/devices'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TrErpIndexRouteImport } from './routes/tr-erp/index'
+import { Route as SyErpIndexRouteImport } from './routes/sy-erp/index'
+import { Route as TrErpPlansRouteImport } from './routes/tr-erp/plans'
+import { Route as TrErpLicensesRouteImport } from './routes/tr-erp/licenses'
+import { Route as TrErpDevicesRouteImport } from './routes/tr-erp/devices'
+import { Route as SyErpPlansRouteImport } from './routes/sy-erp/plans'
+import { Route as SyErpLicensesRouteImport } from './routes/sy-erp/licenses'
+import { Route as SyErpDevicesRouteImport } from './routes/sy-erp/devices'
 import { Route as LicensesIdRouteImport } from './routes/licenses.$id'
+import { Route as TrErpLicensesIdRouteImport } from './routes/tr-erp/licenses.$id'
+import { Route as SyErpLicensesIdRouteImport } from './routes/sy-erp/licenses.$id'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -53,10 +63,60 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrErpIndexRoute = TrErpIndexRouteImport.update({
+  id: '/tr-erp/',
+  path: '/tr-erp/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SyErpIndexRoute = SyErpIndexRouteImport.update({
+  id: '/sy-erp/',
+  path: '/sy-erp/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrErpPlansRoute = TrErpPlansRouteImport.update({
+  id: '/tr-erp/plans',
+  path: '/tr-erp/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrErpLicensesRoute = TrErpLicensesRouteImport.update({
+  id: '/tr-erp/licenses',
+  path: '/tr-erp/licenses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrErpDevicesRoute = TrErpDevicesRouteImport.update({
+  id: '/tr-erp/devices',
+  path: '/tr-erp/devices',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SyErpPlansRoute = SyErpPlansRouteImport.update({
+  id: '/sy-erp/plans',
+  path: '/sy-erp/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SyErpLicensesRoute = SyErpLicensesRouteImport.update({
+  id: '/sy-erp/licenses',
+  path: '/sy-erp/licenses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SyErpDevicesRoute = SyErpDevicesRouteImport.update({
+  id: '/sy-erp/devices',
+  path: '/sy-erp/devices',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LicensesIdRoute = LicensesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => LicensesRoute,
+} as any)
+const TrErpLicensesIdRoute = TrErpLicensesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => TrErpLicensesRoute,
+} as any)
+const SyErpLicensesIdRoute = SyErpLicensesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => SyErpLicensesRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -68,6 +128,16 @@ export interface FileRoutesByFullPath {
   '/plans': typeof PlansRoute
   '/settings': typeof SettingsRoute
   '/licenses/$id': typeof LicensesIdRoute
+  '/sy-erp/devices': typeof SyErpDevicesRoute
+  '/sy-erp/licenses': typeof SyErpLicensesRouteWithChildren
+  '/sy-erp/plans': typeof SyErpPlansRoute
+  '/tr-erp/devices': typeof TrErpDevicesRoute
+  '/tr-erp/licenses': typeof TrErpLicensesRouteWithChildren
+  '/tr-erp/plans': typeof TrErpPlansRoute
+  '/sy-erp/': typeof SyErpIndexRoute
+  '/tr-erp/': typeof TrErpIndexRoute
+  '/sy-erp/licenses/$id': typeof SyErpLicensesIdRoute
+  '/tr-erp/licenses/$id': typeof TrErpLicensesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +148,16 @@ export interface FileRoutesByTo {
   '/plans': typeof PlansRoute
   '/settings': typeof SettingsRoute
   '/licenses/$id': typeof LicensesIdRoute
+  '/sy-erp/devices': typeof SyErpDevicesRoute
+  '/sy-erp/licenses': typeof SyErpLicensesRouteWithChildren
+  '/sy-erp/plans': typeof SyErpPlansRoute
+  '/tr-erp/devices': typeof TrErpDevicesRoute
+  '/tr-erp/licenses': typeof TrErpLicensesRouteWithChildren
+  '/tr-erp/plans': typeof TrErpPlansRoute
+  '/sy-erp': typeof SyErpIndexRoute
+  '/tr-erp': typeof TrErpIndexRoute
+  '/sy-erp/licenses/$id': typeof SyErpLicensesIdRoute
+  '/tr-erp/licenses/$id': typeof TrErpLicensesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +169,16 @@ export interface FileRoutesById {
   '/plans': typeof PlansRoute
   '/settings': typeof SettingsRoute
   '/licenses/$id': typeof LicensesIdRoute
+  '/sy-erp/devices': typeof SyErpDevicesRoute
+  '/sy-erp/licenses': typeof SyErpLicensesRouteWithChildren
+  '/sy-erp/plans': typeof SyErpPlansRoute
+  '/tr-erp/devices': typeof TrErpDevicesRoute
+  '/tr-erp/licenses': typeof TrErpLicensesRouteWithChildren
+  '/tr-erp/plans': typeof TrErpPlansRoute
+  '/sy-erp/': typeof SyErpIndexRoute
+  '/tr-erp/': typeof TrErpIndexRoute
+  '/sy-erp/licenses/$id': typeof SyErpLicensesIdRoute
+  '/tr-erp/licenses/$id': typeof TrErpLicensesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +191,16 @@ export interface FileRouteTypes {
     | '/plans'
     | '/settings'
     | '/licenses/$id'
+    | '/sy-erp/devices'
+    | '/sy-erp/licenses'
+    | '/sy-erp/plans'
+    | '/tr-erp/devices'
+    | '/tr-erp/licenses'
+    | '/tr-erp/plans'
+    | '/sy-erp/'
+    | '/tr-erp/'
+    | '/sy-erp/licenses/$id'
+    | '/tr-erp/licenses/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +211,16 @@ export interface FileRouteTypes {
     | '/plans'
     | '/settings'
     | '/licenses/$id'
+    | '/sy-erp/devices'
+    | '/sy-erp/licenses'
+    | '/sy-erp/plans'
+    | '/tr-erp/devices'
+    | '/tr-erp/licenses'
+    | '/tr-erp/plans'
+    | '/sy-erp'
+    | '/tr-erp'
+    | '/sy-erp/licenses/$id'
+    | '/tr-erp/licenses/$id'
   id:
     | '__root__'
     | '/'
@@ -121,6 +231,16 @@ export interface FileRouteTypes {
     | '/plans'
     | '/settings'
     | '/licenses/$id'
+    | '/sy-erp/devices'
+    | '/sy-erp/licenses'
+    | '/sy-erp/plans'
+    | '/tr-erp/devices'
+    | '/tr-erp/licenses'
+    | '/tr-erp/plans'
+    | '/sy-erp/'
+    | '/tr-erp/'
+    | '/sy-erp/licenses/$id'
+    | '/tr-erp/licenses/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -131,6 +251,14 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PlansRoute: typeof PlansRoute
   SettingsRoute: typeof SettingsRoute
+  SyErpDevicesRoute: typeof SyErpDevicesRoute
+  SyErpLicensesRoute: typeof SyErpLicensesRouteWithChildren
+  SyErpPlansRoute: typeof SyErpPlansRoute
+  TrErpDevicesRoute: typeof TrErpDevicesRoute
+  TrErpLicensesRoute: typeof TrErpLicensesRouteWithChildren
+  TrErpPlansRoute: typeof TrErpPlansRoute
+  SyErpIndexRoute: typeof SyErpIndexRoute
+  TrErpIndexRoute: typeof TrErpIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -184,12 +312,82 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tr-erp/': {
+      id: '/tr-erp/'
+      path: '/tr-erp'
+      fullPath: '/tr-erp/'
+      preLoaderRoute: typeof TrErpIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sy-erp/': {
+      id: '/sy-erp/'
+      path: '/sy-erp'
+      fullPath: '/sy-erp/'
+      preLoaderRoute: typeof SyErpIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tr-erp/plans': {
+      id: '/tr-erp/plans'
+      path: '/tr-erp/plans'
+      fullPath: '/tr-erp/plans'
+      preLoaderRoute: typeof TrErpPlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tr-erp/licenses': {
+      id: '/tr-erp/licenses'
+      path: '/tr-erp/licenses'
+      fullPath: '/tr-erp/licenses'
+      preLoaderRoute: typeof TrErpLicensesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tr-erp/devices': {
+      id: '/tr-erp/devices'
+      path: '/tr-erp/devices'
+      fullPath: '/tr-erp/devices'
+      preLoaderRoute: typeof TrErpDevicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sy-erp/plans': {
+      id: '/sy-erp/plans'
+      path: '/sy-erp/plans'
+      fullPath: '/sy-erp/plans'
+      preLoaderRoute: typeof SyErpPlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sy-erp/licenses': {
+      id: '/sy-erp/licenses'
+      path: '/sy-erp/licenses'
+      fullPath: '/sy-erp/licenses'
+      preLoaderRoute: typeof SyErpLicensesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sy-erp/devices': {
+      id: '/sy-erp/devices'
+      path: '/sy-erp/devices'
+      fullPath: '/sy-erp/devices'
+      preLoaderRoute: typeof SyErpDevicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/licenses/$id': {
       id: '/licenses/$id'
       path: '/$id'
       fullPath: '/licenses/$id'
       preLoaderRoute: typeof LicensesIdRouteImport
       parentRoute: typeof LicensesRoute
+    }
+    '/tr-erp/licenses/$id': {
+      id: '/tr-erp/licenses/$id'
+      path: '/$id'
+      fullPath: '/tr-erp/licenses/$id'
+      preLoaderRoute: typeof TrErpLicensesIdRouteImport
+      parentRoute: typeof TrErpLicensesRoute
+    }
+    '/sy-erp/licenses/$id': {
+      id: '/sy-erp/licenses/$id'
+      path: '/$id'
+      fullPath: '/sy-erp/licenses/$id'
+      preLoaderRoute: typeof SyErpLicensesIdRouteImport
+      parentRoute: typeof SyErpLicensesRoute
     }
   }
 }
@@ -206,6 +404,30 @@ const LicensesRouteWithChildren = LicensesRoute._addFileChildren(
   LicensesRouteChildren,
 )
 
+interface SyErpLicensesRouteChildren {
+  SyErpLicensesIdRoute: typeof SyErpLicensesIdRoute
+}
+
+const SyErpLicensesRouteChildren: SyErpLicensesRouteChildren = {
+  SyErpLicensesIdRoute: SyErpLicensesIdRoute,
+}
+
+const SyErpLicensesRouteWithChildren = SyErpLicensesRoute._addFileChildren(
+  SyErpLicensesRouteChildren,
+)
+
+interface TrErpLicensesRouteChildren {
+  TrErpLicensesIdRoute: typeof TrErpLicensesIdRoute
+}
+
+const TrErpLicensesRouteChildren: TrErpLicensesRouteChildren = {
+  TrErpLicensesIdRoute: TrErpLicensesIdRoute,
+}
+
+const TrErpLicensesRouteWithChildren = TrErpLicensesRoute._addFileChildren(
+  TrErpLicensesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuditRoute: AuditRoute,
@@ -214,6 +436,14 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PlansRoute: PlansRoute,
   SettingsRoute: SettingsRoute,
+  SyErpDevicesRoute: SyErpDevicesRoute,
+  SyErpLicensesRoute: SyErpLicensesRouteWithChildren,
+  SyErpPlansRoute: SyErpPlansRoute,
+  TrErpDevicesRoute: TrErpDevicesRoute,
+  TrErpLicensesRoute: TrErpLicensesRouteWithChildren,
+  TrErpPlansRoute: TrErpPlansRoute,
+  SyErpIndexRoute: SyErpIndexRoute,
+  TrErpIndexRoute: TrErpIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
