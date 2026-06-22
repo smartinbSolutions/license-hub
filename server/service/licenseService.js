@@ -23,7 +23,7 @@ async function findLicenseOrThrow(licenses, id) {
   return withoutMongoId(license);
 }
 
-exports.listLicenses = async ({ product, region } = {}) => {
+export const listLicenses = async ({ product, region } = {}) => {
   const { licenses } = await getCollections();
 
   const query = {};
@@ -40,7 +40,7 @@ exports.listLicenses = async ({ product, region } = {}) => {
   return results.map((license) => publicLicense(withoutMongoId(license)));
 };
 
-exports.getLicense = async ({ id }) => {
+export const getLicense = async ({ id }) => {
   const { licenses } = await getCollections();
 
   const license = await licenses.findOne({ id });
@@ -52,7 +52,7 @@ exports.getLicense = async ({ id }) => {
   return publicLicense(withoutMongoId(license));
 };
 
-exports.createLicense = async ({ input }) => {
+export const createLicense = async ({ input }) => {
   const { licenses, plans, auditLogs } = await getCollections();
 
   const planId = String(input?.planId || "").trim();
@@ -101,7 +101,7 @@ exports.createLicense = async ({ input }) => {
   return publicLicense(license);
 };
 
-exports.updateLicense = async ({ id, input }) => {
+export const updateLicense = async ({ id, input }) => {
   const { licenses, plans, auditLogs } = await getCollections();
 
   const existingDoc = await licenses.findOne({ id });
@@ -169,7 +169,7 @@ exports.updateLicense = async ({ id, input }) => {
   return publicLicense(nextLicense);
 };
 
-exports.resetLicenseDevices = async ({ id }) => {
+export const resetLicenseDevices = async ({ id }) => {
   const { licenses, auditLogs } = await getCollections();
 
   const existing = await licenses.findOne({ id });
@@ -198,7 +198,7 @@ exports.resetLicenseDevices = async ({ id }) => {
   return publicLicense(nextLicense);
 };
 
-exports.deleteLicense = async ({ id }) => {
+export const deleteLicense = async ({ id }) => {
   const { licenses, auditLogs } = await getCollections();
 
   const existing = await licenses.findOne({ id });
