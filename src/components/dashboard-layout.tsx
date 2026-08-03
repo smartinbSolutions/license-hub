@@ -170,8 +170,8 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
           </DropdownMenu>
         </header>
         <main className="p-4 md:p-6 lg:p-8">
-          <Outlet />
-          {children}
+    <Outlet />
+    {children}
         </main>
       </div>
     </div>

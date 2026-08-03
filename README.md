@@ -39,7 +39,7 @@ server/
 Start the API server:
 
 ```powershell
-$env:MONGODB_URI="mongodb+srv://me:1234@cluster0.wp09nak.mongodb.net/posLicense?appName=Cluster0"
+$env:MONGODB_URI=""
 npm run dev:api
 ```
 

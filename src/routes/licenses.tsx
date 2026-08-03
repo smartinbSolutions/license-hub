@@ -1,5 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Outlet, useMatchRoute } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { useLocation } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import type { License, LicenseStatus, Plan } from "@/lib/types";
 import { Card } from "@/components/ui/card";
@@ -65,6 +66,11 @@ export const Route = createFileRoute("/licenses")({
 });
 
 function Licenses() {
+  const location = useLocation();
+
+  if (location.pathname !== "/licenses") {
+    return null;
+  }
   const navigate = useNavigate();
   const [licenses, setLicenses] = useState<License[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);

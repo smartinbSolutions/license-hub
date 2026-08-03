@@ -57,7 +57,12 @@ export const createLicense = async ({ input }) => {
 
   const planId = String(input?.planId || "").trim();
 
+  console.log("INPUT:", input);
+  console.log("PLAN ID:", planId);
+
   const planDoc = await plans.findOne({ id: planId });
+
+  console.log("PLAN DOC:", planDoc);
 
   if (!planDoc) {
     throw badRequest("A valid plan is required");

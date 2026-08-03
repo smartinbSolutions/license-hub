@@ -14,12 +14,9 @@ import type { AuditLog, License } from "@/lib/types";
 
 export const Route = createFileRoute("/licenses/$id")({
   component: () => (
-    <DashboardLayout>
       <Detail />
-    </DashboardLayout>
   ),
 });
-
 function Detail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();

@@ -24,7 +24,7 @@ import { Route as TrErpDevicesRouteImport } from './routes/tr-erp/devices'
 import { Route as SyErpPlansRouteImport } from './routes/sy-erp/plans'
 import { Route as SyErpLicensesRouteImport } from './routes/sy-erp/licenses'
 import { Route as SyErpDevicesRouteImport } from './routes/sy-erp/devices'
-import { Route as LicensesIdRouteImport } from './routes/licenses.$id'
+import { Route as LicensesIdRouteImport } from './routes/licenses.$id.tsx'
 import { Route as TrErpLicensesIdRouteImport } from './routes/tr-erp/licenses.$id'
 import { Route as SyErpLicensesIdRouteImport } from './routes/sy-erp/licenses.$id'
 

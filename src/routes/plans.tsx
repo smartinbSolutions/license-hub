@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { createPlan, deletePlan, listPlans, updatePlan } from "@/lib/plan-service";
+import GlobalDeleteModal from "@/components/ui/global-delete-modal";
 
 export const Route = createFileRoute("/plans")({
   component: () => (
@@ -32,6 +33,9 @@ function Plans() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [editing, setEditing] = useState<Plan | null>(null);
   const [open, setOpen] = useState(false);
+
+  const [deletePlanItem, setDeletePlanItem] = useState<Plan | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   async function refreshPlans() {
     try {
@@ -77,12 +81,18 @@ function Plans() {
   }
 
   async function removePlan(id: string) {
+    setDeleteLoading(true);
+
     try {
       await deletePlan(id);
       await refreshPlans();
+
       toast.success("Plan removed");
+      setDeletePlanItem(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to remove plan");
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -174,7 +184,7 @@ function Plans() {
                   size="sm"
                   className="gap-1.5 text-destructive"
                   onClick={() => {
-                    void removePlan(p?.id);
+                    setDeletePlanItem(p);
                   }}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -186,6 +196,24 @@ function Plans() {
       </div>
 
       <PlanDialog open={open} onOpenChange={setOpen} plan={editing} onSave={save} />
+
+      <GlobalDeleteModal
+        open={!!deletePlanItem}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeletePlanItem(null);
+          }
+        }}
+        title="Delete Plan"
+        description={`Are you sure you want to delete "${deletePlanItem?.name}"? This action cannot be undone.`}
+        confirmText="Delete Plan"
+        loading={deleteLoading}
+        onDelete={() => {
+          if (!deletePlanItem) return;
+
+          return removePlan(deletePlanItem.id);
+        }}
+      />
     </div>
   );
 }
