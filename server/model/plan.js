@@ -5,6 +5,7 @@ export const writablePlanFields = [
   "name",
   "maxDevices",
   "durationDays",
+  "perpetual",
   "price",
   "currency",
   "features",
@@ -12,11 +13,14 @@ export const writablePlanFields = [
 ];
 
 export function sanitizePlanInput(input) {
+  const perpetual = Boolean(input.perpetual);
+
   return {
     id: input.id ? String(input.id).trim() : generateId("plan"),
     name: String(input.name || "").trim(),
     maxDevices: Math.max(1, Number(input.maxDevices || 1)),
-    durationDays: Math.max(1, Number(input.durationDays || 365)),
+    perpetual,
+    durationDays: perpetual ? null : Math.max(1, Number(input.durationDays || 365)),
     price: Math.max(0, Number(input.price || 0)),
     currency: String(input.currency || "USD")
       .trim()
@@ -36,8 +40,13 @@ export function sanitizePlanUpdates(input) {
   if (updates.name !== undefined) updates.name = String(updates.name).trim();
   if (updates.maxDevices !== undefined)
     updates.maxDevices = Math.max(1, Number(updates.maxDevices));
-  if (updates.durationDays !== undefined)
-    updates.durationDays = Math.max(1, Number(updates.durationDays));
+  if (updates.perpetual !== undefined) updates.perpetual = Boolean(updates.perpetual);
+  if (updates.durationDays !== undefined) {
+    updates.durationDays =
+      updates.perpetual || updates.durationDays === null
+        ? null
+        : Math.max(1, Number(updates.durationDays));
+  }
   if (updates.price !== undefined) updates.price = Math.max(0, Number(updates.price));
   if (updates.currency !== undefined)
     updates.currency = String(updates.currency).trim().toUpperCase();
@@ -58,7 +67,7 @@ export function requirePlanFields(plan) {
   if (!Number.isFinite(plan.maxDevices) || plan.maxDevices < 1) {
     throw badRequest("Max devices must be at least 1");
   }
-  if (!Number.isFinite(plan.durationDays) || plan.durationDays < 1) {
+  if (!plan.perpetual && (!Number.isFinite(plan.durationDays) || plan.durationDays < 1)) {
     throw badRequest("Duration must be at least 1 day");
   }
   if (!plan.currency) throw badRequest("Currency is required");

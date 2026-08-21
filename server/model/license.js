@@ -15,6 +15,7 @@ export const writableLicenseFields = [
   "maxDevices",
   "startsAt",
   "expiresAt",
+  "perpetual",
   "notes",
   "activations",
   "product",
@@ -60,9 +61,13 @@ export function publicLicense(license) {
 export function sanitizeLicenseInput(input, plan) {
   const startsAt = input.startsAt ? new Date(input.startsAt) : new Date();
 
-  const expiresAt = input.expiresAt
-    ? new Date(input.expiresAt)
-    : new Date(startsAt.getTime() + (plan?.durationDays ?? 365) * 86400_000);
+  const perpetual = Boolean(input.perpetual ?? plan?.perpetual);
+
+  const expiresAt = perpetual
+    ? null
+    : input.expiresAt
+      ? new Date(input.expiresAt)
+      : new Date(startsAt.getTime() + (plan?.durationDays ?? 365) * 86400_000);
 
   const product = String(input.product || PRODUCTS.POS).toLowerCase();
 
@@ -98,18 +103,21 @@ export function sanitizeLicenseInput(input, plan) {
 
     maxDevices: Math.max(1, Number(input.maxDevices || plan?.maxDevices || 1)),
 
+    perpetual,
     startsAt: startsAt.toISOString(),
-    expiresAt: expiresAt.toISOString(),
+    expiresAt: expiresAt ? expiresAt.toISOString() : null,
 
     notes: input.notes ? String(input.notes).trim() : "",
   };
 }
 
 export function requireLicenseFields(license) {
-  if (!license.customerName || !license.customerEmail || !license.planId || !license.expiresAt) {
+  if (!license.customerName || !license.customerEmail || !license.planId) {
     throw badRequest("Customer name, email, plan, and expiry are required");
   }
-
+  if (!license.perpetual && !license.expiresAt) {
+    throw badRequest("Expiry date is required unless the license is perpetual");
+  }
   if (!license.licenseKey) {
     throw badRequest("A valid license key is required");
   }
@@ -130,7 +138,10 @@ export function requireLicenseFields(license) {
     throw badRequest("Max devices must be at least 1");
   }
 
-  if (new Date(license.expiresAt).getTime() <= new Date(license.startsAt).getTime()) {
+  if (
+    !license.perpetual &&
+    new Date(license.expiresAt).getTime() <= new Date(license.startsAt).getTime()
+  ) {
     throw badRequest("Expiry date must be after start date");
   }
 }
@@ -142,7 +153,12 @@ export function sanitizeLicenseUpdates(input) {
 
   if (updates.licenseKey) updates.licenseKey = String(updates.licenseKey).trim().toUpperCase();
   if (updates.startsAt) updates.startsAt = new Date(updates.startsAt).toISOString();
-  if (updates.expiresAt) updates.expiresAt = new Date(updates.expiresAt).toISOString();
+  if (updates.expiresAt !== undefined) {
+    updates.expiresAt = updates.expiresAt ? new Date(updates.expiresAt).toISOString() : null;
+  }
+  if (updates.perpetual !== undefined) {
+    updates.perpetual = Boolean(updates.perpetual);
+  }
   if (updates.maxDevices) updates.maxDevices = Math.max(1, Number(updates.maxDevices));
   if (updates.product) updates.product = String(updates.product).toLowerCase();
   if (updates.region) updates.region = String(updates.region).toLowerCase();

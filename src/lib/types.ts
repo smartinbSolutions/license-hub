@@ -18,7 +18,8 @@ export interface License {
   status: LicenseStatus;
   maxDevices: number;
   startsAt: string;
-  expiresAt: string;
+  perpetual: boolean;
+  expiresAt: string | null;
   notes?: string;
   activations: Activation[];
   createdAt: string;
@@ -31,7 +32,8 @@ export interface Plan {
   id: string;
   name: string;
   maxDevices: number;
-  durationDays: number;
+  perpetual: boolean;
+  durationDays: number | null;
   price: number;
   currency: string;
   features: string[];

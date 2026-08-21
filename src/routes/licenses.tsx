@@ -43,6 +43,7 @@ import {
   Eye,
   Search,
   KeyRound,
+  InfinityIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/license-utils";
@@ -121,9 +122,11 @@ function Licenses() {
       if (statusFilter !== "all" && l.status !== statusFilter) return false;
       if (planFilter !== "all" && l.planId !== planFilter) return false;
       if (expiryFilter === "expiring") {
+        if (l.perpetual || !l.expiresAt) return false;
         const days = (new Date(l.expiresAt).getTime() - Date.now()) / 86400_000;
         if (!(days > 0 && days < 30)) return false;
       } else if (expiryFilter === "past") {
+        if (l.perpetual || !l.expiresAt) return false;
         if (new Date(l.expiresAt).getTime() >= Date.now()) return false;
       }
       if (usageFilter === "full" && l.activations.length < l.maxDevices) return false;
@@ -354,7 +357,13 @@ function Licenses() {
                       <span className="text-muted-foreground"> / {l.maxDevices}</span>
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground">
-                      {format(new Date(l.expiresAt), "MMM d, yyyy")}
+                      {l.expiresAt ? (
+                        format(new Date(l.expiresAt), "MMM d, yyyy")
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-foreground">
+                          <InfinityIcon className="h-3.5 w-3.5" /> Never
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground">
                       {last ? format(new Date(last), "MMM d, yyyy") : "—"}

@@ -31,6 +31,10 @@ interface Props {
   onSubmit: (data: Partial<License>) => Promise<void> | void;
 }
 
+function addDays(from: Date, days: number) {
+  return new Date(from.getTime() + days * 86400_000);
+}
+
 export function LicenseFormDialog({ open, onOpenChange, initial, plans, onSubmit }: Props) {
   const isEdit = !!initial;
   const defaultPlan = useMemo(() => initial?.planId ?? plans[0]?.id ?? "", [initial, plans]);
@@ -43,8 +47,11 @@ export function LicenseFormDialog({ open, onOpenChange, initial, plans, onSubmit
   const [startsAt, setStartsAt] = useState(
     (initial?.startsAt ?? new Date().toISOString()).slice(0, 10),
   );
+  const [perpetual, setPerpetual] = useState(initial?.perpetual ?? false);
   const [expiresAt, setExpiresAt] = useState(
-    (initial?.expiresAt ?? new Date(Date.now() + 365 * 86400_000).toISOString()).slice(0, 10),
+    perpetual
+      ? ""
+      : (initial?.expiresAt ?? new Date(Date.now() + 365 * 86400_000).toISOString()).slice(0, 10),
   );
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [saving, setSaving] = useState(false);
@@ -55,10 +62,13 @@ export function LicenseFormDialog({ open, onOpenChange, initial, plans, onSubmit
     const nextPlanId = initial?.planId ?? plans[0]?.id ?? "";
     const nextPlan = plans.find((p) => p.id === nextPlanId);
     const nextStartsAt = (initial?.startsAt ?? new Date().toISOString()).slice(0, 10);
-    const nextExpiresAt = (
-      initial?.expiresAt ??
-      new Date(Date.now() + (nextPlan?.durationDays ?? 365) * 86400_000).toISOString()
-    ).slice(0, 10);
+    const nextPerpetual = Boolean(nextPlan?.perpetual);
+    const nextExpiresAt = nextPerpetual
+      ? ""
+      : (
+          initial?.expiresAt ??
+          addDays(new Date(nextStartsAt), nextPlan?.durationDays ?? 365).toISOString()
+        ).slice(0, 10);
 
     setLicenseKey(initial?.licenseKey ?? generateLicenseKey());
     setCustomerName(initial?.customerName ?? "");
@@ -67,6 +77,7 @@ export function LicenseFormDialog({ open, onOpenChange, initial, plans, onSubmit
     setStatus(initial?.status ?? "active");
     setMaxDevices(initial?.maxDevices ?? nextPlan?.maxDevices ?? 1);
     setStartsAt(nextStartsAt);
+    setPerpetual(nextPerpetual);
     setExpiresAt(nextExpiresAt);
     setNotes(initial?.notes ?? "");
   }, [initial, open, plans]);
@@ -88,9 +99,13 @@ export function LicenseFormDialog({ open, onOpenChange, initial, plans, onSubmit
     if (!plan) return;
 
     setMaxDevices(plan.maxDevices);
-    if (!isEdit) {
+    setPerpetual(Boolean(plan.perpetual));
+
+    if (plan.perpetual) {
+      setExpiresAt("");
+    } else {
       const start = new Date(startsAt);
-      const expiry = new Date(start.getTime() + plan.durationDays * 86400_000);
+      const expiry = addDays(start, plan.durationDays ?? 365);
       setExpiresAt(expiry.toISOString().slice(0, 10));
     }
   }
@@ -115,9 +130,15 @@ export function LicenseFormDialog({ open, onOpenChange, initial, plans, onSubmit
       toast.error("Max devices must be at least 1");
       return;
     }
-    if (new Date(expiresAt).getTime() <= new Date(startsAt).getTime()) {
-      toast.error("Expiry date must be after the start date");
-      return;
+    if (!perpetual) {
+      if (!expiresAt) {
+        toast.error("Expiry date is required");
+        return;
+      }
+      if (new Date(expiresAt).getTime() <= new Date(startsAt).getTime()) {
+        toast.error("Expiry date must be after the start date");
+        return;
+      }
     }
 
     setSaving(true);
@@ -131,7 +152,8 @@ export function LicenseFormDialog({ open, onOpenChange, initial, plans, onSubmit
         status,
         maxDevices: Number(maxDevices),
         startsAt: new Date(startsAt).toISOString(),
-        expiresAt: new Date(expiresAt).toISOString(),
+        perpetual,
+        expiresAt: perpetual ? null : new Date(expiresAt).toISOString(),
         notes: notes.trim(),
       });
     } finally {
@@ -208,6 +230,7 @@ export function LicenseFormDialog({ open, onOpenChange, initial, plans, onSubmit
                   {plans.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
+                      {p.perpetual ? " (Lifetime)" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -239,6 +262,13 @@ export function LicenseFormDialog({ open, onOpenChange, initial, plans, onSubmit
             </div>
           </div>
 
+          {perpetual && (
+            <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-3 text-sm">
+              <span className="font-medium">Lifetime license</span>
+              <span className="text-muted-foreground">— this plan has no expiry.</span>
+            </div>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="sa">Starts at</Label>
@@ -255,6 +285,8 @@ export function LicenseFormDialog({ open, onOpenChange, initial, plans, onSubmit
                 id="ea"
                 type="date"
                 value={expiresAt}
+                disabled={perpetual}
+                placeholder={perpetual ? "Never expires" : undefined}
                 onChange={(e) => setExpiresAt(e.target.value)}
               />
             </div>

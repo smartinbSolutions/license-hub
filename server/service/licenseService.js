@@ -57,12 +57,7 @@ export const createLicense = async ({ input }) => {
 
   const planId = String(input?.planId || "").trim();
 
-  console.log("INPUT:", input);
-  console.log("PLAN ID:", planId);
-
   const planDoc = await plans.findOne({ id: planId });
-
-  console.log("PLAN DOC:", planDoc);
 
   if (!planDoc) {
     throw badRequest("A valid plan is required");
@@ -139,6 +134,24 @@ export const updateLicense = async ({ id, input }) => {
     if (existing.product === "erp" && input.modules === undefined) {
       updates.modules = plan.modules || [];
     }
+
+    // Plan change carries its duration policy over, unless the caller
+    // explicitly set perpetual/expiresAt in the same request.
+    if (input.perpetual === undefined && input.expiresAt === undefined) {
+      updates.perpetual = Boolean(plan.perpetual);
+      updates.expiresAt = plan.perpetual
+        ? null
+        : new Date(
+            new Date(existing.startsAt).getTime() + (plan.durationDays ?? 365) * 86400_000,
+          ).toISOString();
+    }
+  }
+
+  // Toggling perpetual on directly (no planId change, no explicit
+  // expiresAt) must clear the stale expiry so the two fields don't
+  // disagree in storage.
+  if (updates.perpetual === true && input.expiresAt === undefined) {
+    updates.expiresAt = null;
   }
 
   if (updates.licenseKey && updates.licenseKey !== existing.licenseKey) {

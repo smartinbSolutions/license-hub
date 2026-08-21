@@ -50,7 +50,7 @@ export async function activateLicense(request) {
     await failActivation(activationAttempts, request, forbidden("license_not_started"));
   }
 
-  if (new Date(license.expiresAt).getTime() < Date.now()) {
+  if (!license.perpetual && new Date(license.expiresAt).getTime() < Date.now()) {
     await failActivation(activationAttempts, request, forbidden("license_expired"));
   }
 
@@ -78,11 +78,11 @@ export async function activateLicense(request) {
     licenseKey: license.licenseKey,
     deviceHash,
     issuedAt: now(),
+    perpetual: license.perpetual ?? false,
     expiresAt: license.expiresAt,
     maxDevices: license.maxDevices,
     planId: license.planId,
   };
-
   await recordAttempt(activationAttempts, request, true);
   await licenses.updateOne(
     { id: license.id },
@@ -92,7 +92,7 @@ export async function activateLicense(request) {
         updatedAt: now(),
         updatedBy: "local-admin",
       },
-    }
+    },
   );
 
   return {

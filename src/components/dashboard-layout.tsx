@@ -33,24 +33,24 @@ const navGroups = [
       { to: "/plans", label: "Plans", icon: Package },
     ],
   },
-  {
-    title: "SY ERP",
-    items: [
-      { to: "/sy-erp", label: "Overview", icon: LayoutDashboard, exact: true },
-      { to: "/sy-erp/licenses", label: "Licenses", icon: KeyRound },
-      { to: "/sy-erp/devices", label: "Devices", icon: Monitor },
-      { to: "/sy-erp/plans", label: "Plans", icon: Package },
-    ],
-  },
-  {
-    title: "TR ERP",
-    items: [
-      { to: "/tr-erp", label: "Overview", icon: LayoutDashboard, exact: true },
-      { to: "/tr-erp/licenses", label: "Licenses", icon: KeyRound },
-      { to: "/tr-erp/devices", label: "Devices", icon: Monitor },
-      { to: "/tr-erp/plans", label: "Plans", icon: Package },
-    ],
-  },
+  // {
+  //   title: "SY ERP",
+  //   items: [
+  //     { to: "/sy-erp", label: "Overview", icon: LayoutDashboard, exact: true },
+  //     { to: "/sy-erp/licenses", label: "Licenses", icon: KeyRound },
+  //     { to: "/sy-erp/devices", label: "Devices", icon: Monitor },
+  //     { to: "/sy-erp/plans", label: "Plans", icon: Package },
+  //   ],
+  // },
+  // {
+  //   title: "TR ERP",
+  //   items: [
+  //     { to: "/tr-erp", label: "Overview", icon: LayoutDashboard, exact: true },
+  //     { to: "/tr-erp/licenses", label: "Licenses", icon: KeyRound },
+  //     { to: "/tr-erp/devices", label: "Devices", icon: Monitor },
+  //     { to: "/tr-erp/plans", label: "Plans", icon: Package },
+  //   ],
+  // },
   {
     title: "Administration",
     items: [
@@ -170,8 +170,8 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
           </DropdownMenu>
         </header>
         <main className="p-4 md:p-6 lg:p-8">
-    <Outlet />
-    {children}
+          <Outlet />
+          {children}
         </main>
       </div>
     </div>
